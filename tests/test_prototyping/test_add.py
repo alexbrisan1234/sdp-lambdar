@@ -20,7 +20,7 @@ import pytest
 # Can have inline tests.
 def test_inline():
     a = Adder()
-    assert a.dd(1, 2) == 3
+    assert a.add(1, 2) == 3
 
 # Can have test classes, the name must be Test<ClassName>
 class TestAdder(object):
