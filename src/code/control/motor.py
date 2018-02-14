@@ -14,7 +14,7 @@ class Motor:
         self.motor.stop()
         
     ''' 
-    measures the speed according to revs / sec
+    measures the speed according to revs / sec of the motor
     NOTICE: even if there's something blocking the robot
     the wheel keeps turning and hence the measurement is inaccurate
     ''' 
