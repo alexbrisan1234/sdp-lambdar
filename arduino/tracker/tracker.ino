@@ -4,12 +4,21 @@ const byte pinTrig = 5;
 int direction = 1;
 long diff = 0;
 int turnAdjustment = 0;
+const String requestSync = "$";
+const String ackSync = "&";
 
 void setup() {
+ // switch on the radio
+ pinMode(8,OUTPUT); 
+ digitalWrite(8,HIGH);
+ pinMode(4, OUTPUT);
+ digitalWrite(4, LOW);
+ Serial.begin(115200);
+  
+  //tracking pins
  pinMode(pinTrig, OUTPUT);
  pinMode(pinEchoL, INPUT);
  pinMode(pinEchoR, INPUT);
- Serial.begin(9600);
 }
 
 int getDirection(long diff) {
@@ -19,7 +28,7 @@ int getDirection(long diff) {
 }
 
 void loop() {
-  long newdiff = 0;
+  /*long newdiff = 0;
   for (int i =0; i< 4; i++){
     newdiff += recordDifference()/4;
   }
@@ -35,12 +44,12 @@ void loop() {
       //turn slower
       else if (newdiff < diff) turnAdjustment--;
   }
-  diff = newdiff;
-
-  if (diff < 0) { Serial.print("L "); Serial.println(turnAdjustment);}
+  diff = newdiff;//*/
+  //recordDifference();
+  /*if (diff < 0) { Serial.print("L "); Serial.println(turnAdjustment);}
   else if (diff > 0){ Serial.print("R "); Serial.println(turnAdjustment);} 
-  else Serial.println("N");
-  
+  else Serial.println("N");//*/
+  //delay(1000);
 }
 
 void listen() {
@@ -52,26 +61,49 @@ void listen() {
 }
 
 long recordDifference() {
-  //long timeout = 0;
   boolean lFire = false;
   boolean rFire = false;
   long lPoint = 0;
   long rPoint=0;
+  //Serial.println("Synchronizing....");
+  
+  //Serial.println("Done!");
   listen();
+  while (sync()==-1);
   //wait till echo pin goes up
-  while ((digitalRead(pinEchoR) == 0));
+  //Serial.println("Wait E pin....");
+  //while ((digitalRead(pinEchoR) == 0));
+  delayMicroseconds(600);
+  //Serial.println("E pin up!");
   long startTime = micros();
-  while ((lFire == 0) || (rFire == 0)){
-    if ((digitalRead(pinEchoR) == 0) && !rFire){
+  //Serial.println("Tracking....");
+  while (!rFire){
+  //while (!lFire || !rFire){
+    //Serial.println(digitalRead(pinEchoR));
+    if ((digitalRead(pinEchoR) == LOW) && !rFire){
+      Serial.println("RF!");
       rFire = true;
       rPoint = micros() - startTime;
     }
-    if ((digitalRead(pinEchoL) == 0) && !lFire){
+    /*if ((digitalRead(pinEchoL) == LOW) && !lFire){
+      //Serial.println("LF!");
       lFire = true;
       lPoint = micros() - startTime;
-    }
+    }//*/
   }
+  //Serial.println(rPoint*0.34);
   if (lPoint > 110000 || rPoint > 110000) return 0;
+  //Serial.println(lPoint- rPoint);
   return lPoint- rPoint;
+}
+
+long sync() {
+  long start = micros();
+  Serial.print(requestSync);
+  Serial.flush();
+  if (Serial.find("&")) {
+    return micros() - start;
+  }
+  return -1;
 }
 
