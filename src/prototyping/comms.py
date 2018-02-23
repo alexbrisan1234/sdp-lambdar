@@ -4,19 +4,41 @@ import time
 
 
 class Serial_Comm:
-    def __init__(self):
-        self.ser = serial.Serial(port="/dev/ttyACM0", baudrate=115200, timeout=None)
+    def __init__(self, oport="/dev/ttyACM0", obaudrate=115200, otimeout=None):
+        self.ser = serial.Serial(port=oport, baudrate=obaudrate, timeout=otimeout)
 
-    def read_from_serial(self):
+        # Set the signal codes, identify the beginning and end of a signal
+        self.no_sig = 4294967295
+
+        self.open_message = 4294967294
+        self.close_message = 4294967293
+
+    def read_message_from_serial(self):
         '''
-        Read a line at a time from the input buffer while it's not empty.
+            Read a line at a time from the input buffer while it's not empty.
         '''
         self.initiate_transmission()
-        while True:
-            # print(int.from_bytes(self.ser.read(), 'big'))
+
+        # Message is essentially a list with some checking functions
+        msg = Message()
+        message_is_open = False
+        message_is_ended = False
+        while not message_is_ended:
             try:
-                print(int(self.ser.readline().strip()))
+                opcode = int(self.ser.readline().strip())
                 self.ser.flush();
+
+                if opcode == self.open_message:
+                    msg = []
+                    self.message_is_open = True
+
+                if message_is_open:
+                    msg.append(opcode)
+
+                    # Ensures the message is being formed correctly
+                    if msg.is_well_formed():
+                        return msg
+
             except ValueError:
                 continue
             except KeyboardInterrupt:
@@ -36,6 +58,11 @@ class Serial_Comm:
         '''Close the port'''
         if self.ser.isOpen():
             self.ser.close()
+
+class Message(list):
+    def is_well_formed(self):
+        if self[0] == 4294967294 and self[-1] == 4294967295: return True
+        else: return False
 
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@ const byte pinTrig = 7;
 // Code for no signal received
 const unsigned long noSig = 4294967295;
 // Code identifies beginning of message
-const unsigned long openMsg = 4000000000;
+const unsigned long openMsg = 4294967294;
 // Code identifies end of message
 const unsigned long closeMsg = 4294967293;
 
