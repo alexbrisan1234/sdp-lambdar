@@ -89,7 +89,7 @@ long recordDifference() {
       //Serial.println("LF!");
       lFire = true;
       lPoint = micros() - startTime;
-    }//*/
+    }*/
   }
   //Serial.println(rPoint*0.34);
   if (lPoint > 110000 || rPoint > 110000) return 0;
