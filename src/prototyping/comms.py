@@ -13,7 +13,7 @@ class Serial_Comm:
         self.open_message = 4294967294
         self.close_message = 4294967293
 
-    def read_message_from_serial(self):
+    def read_message(self):
         '''
             Read a line at a time from the input buffer while it's not empty.
         '''
@@ -60,9 +60,37 @@ class Serial_Comm:
             self.ser.close()
 
 class Message(list):
+    # Give the type of the message
+    msg_type = None
+
+    ids = [4294967292,4294967291]
+    timestamp = 0
+
     def is_well_formed(self):
-        if self[0] == 4294967294 and self[-1] == 4294967295: return True
-        else: return False
+        'Checks if the message is fit to pass to planning'
+        wf = True
+        if not self[0] == 4294967294: wf = False
+        if not self[-1] == 4294967295: wf = False
+
+        if not self[1] in self.ids: wf = False
+
+        return wf
+
+
+    def append(self, item):
+        ''' 
+            Extension of list append assigns a type to the class
+        '''
+        if len(self) == 0:
+            self.timestamp = int(round(time.time() * 1000))
+
+        if len(self) > 2:
+            if self[1] == self.ids[0]:
+                self.msg_type = 'ultrasonic'
+            if self[1] == self.ids[1]:
+                self.msg_type = 'infrared'
+
+        super(Message, list).append(item)
 
 
 if __name__ == '__main__':
