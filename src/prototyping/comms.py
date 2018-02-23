@@ -46,7 +46,6 @@ class Serial_Comm:
                 continue
             except KeyboardInterrupt:
                 exit()
-        return '' 
 
     def send_to_serial(self, message):
         self.initiate_transmission()
