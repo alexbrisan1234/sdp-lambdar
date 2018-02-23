@@ -33,6 +33,7 @@ class Arnold:
 
 
     def actuate(self):
+        'Logic for selecting an acutation strategy and activating motors'
         if self.acting_mode = Mode.FOLLOW:
             pass
         else:

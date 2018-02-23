@@ -2,6 +2,9 @@
 import serial
 import time
 
+open_message = 4294967294
+close_message = 4294967295
+
 
 class Serial_Comm:
     def __init__(self, oport="/dev/ttyACM0", obaudrate=115200, otimeout=None):
@@ -69,8 +72,8 @@ class Message(list):
     def is_well_formed(self):
         'Checks if the message is fit to pass to planning'
         wf = True
-        if not self[0] == 4294967294: wf = False
-        if not self[-1] == 4294967295: wf = False
+        if not self[0] == open_message: wf = False
+        if not self[-1] == close_message: wf = False
 
         if not self[1] in self.ids: wf = False
 
@@ -92,6 +95,18 @@ class Message(list):
 
         super(Message, list).append(item)
 
+
+    def get_left(self):
+        if self.msg_type != 'ultrasonic':
+            raise ValueError
+
+        return self[2]
+
+    def get_right(self):
+        if self.msg_type != 'ultrasonic':
+            raise ValueError
+
+        return self[3]
 
 if __name__ == '__main__':
     ard = Serial_Comm()
