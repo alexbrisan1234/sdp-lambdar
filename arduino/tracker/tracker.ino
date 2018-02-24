@@ -97,6 +97,43 @@ void requestSignal() {
   Serial.flush();
 }
 
+long recordDifference() {
+  boolean lFire = false;
+  boolean rFire = false;
+  long lPoint = 0;
+  long rPoint=0;
+  //Serial.println("Synchronizing....");
+  
+  //Serial.println("Done!");
+  listen();
+  while (sync()==-1);
+  //wait till echo pin goes up
+  //Serial.println("Wait E pin....");
+  //while ((digitalRead(pinEchoR) == 0));
+  delayMicroseconds(600);
+  //Serial.println("E pin up!");
+  long startTime = micros();
+  //Serial.println("Tracking....");
+  while (!rFire){
+  //while (!lFire || !rFire){
+    //Serial.println(digitalRead(pinEchoR));
+    if ((digitalRead(pinEchoR) == LOW) && !rFire){
+      Serial.println("RF!");
+      rFire = true;
+      rPoint = micros() - startTime;
+    }
+    /*if ((digitalRead(pinEchoL) == LOW) && !lFire){
+      //Serial.println("LF!");
+      lFire = true;
+      lPoint = micros() - startTime;
+    }*/
+  }
+  //Serial.println(rPoint*0.34);
+  if (lPoint > 110000 || rPoint > 110000) return 0;
+  //Serial.println(lPoint- rPoint);
+  return lPoint- rPoint;
+}
+
 void measureTimes(uint32_t startTime, uint32_t* timeLeft, uint32_t* timeRight)
 {
   uint8_t echo = getEcho(kBoth);
