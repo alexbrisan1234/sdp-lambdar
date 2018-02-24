@@ -16,6 +16,8 @@ struct timeData {
     byte rD;
 };
 
+typedef struct timeData timeData;
+
 void setup(){
     Serial.begin(115200);
     pinMode(8,OUTPUT); // switch on the radio
@@ -33,8 +35,8 @@ void listen(){
     digitalWrite(pinTrig, LOW);
 }
 
-struct timeData genData() {
-    struct timeData td;
+timeData genData() {
+    timeData td;
     td.lD = 5;
     td.rD = 6;
 
@@ -48,7 +50,7 @@ void sendAsBytes(long i) {
     Serial.write(i >> 24);
 }
 
-void sendData(struct timeData td) {
+void sendData(timeData td) {
     Serial.println(String(openMsg));
     Serial.flush();
     Serial.println(String(uID));
