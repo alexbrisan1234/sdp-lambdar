@@ -1,77 +1,176 @@
-const byte pinEchoL = 7;
-const byte pinEchoR = 6;
-const byte pinTrig = 5;
-int direction = 1;
-long diff = 0;
-int turnAdjustment = 0;
+// Tracking settings
+constexpr int trigAllPin = 5;  // All receivers are connected to this pin
+constexpr int kLeftEchoPin = 6;  // needs to be between 2 and 7 (inclusive)
+constexpr int kRightEchoPin = 7;  // needs to be between 2 and 7 (inclusive)
+constexpr uint32_t kReceiverTimeout = 110000;
 
-void setup() {
- pinMode(pinTrig, OUTPUT);
- pinMode(pinEchoL, INPUT);
- pinMode(pinEchoR, INPUT);
- Serial.begin(9600);
+// Masks for echo pins
+constexpr uint8_t kLeft = (1 << kLeftEchoPin);
+constexpr uint8_t kRight = (1 << kRightEchoPin);
+constexpr uint8_t kBoth = kLeft | kRight;
+
+// Radio settings
+const uint32_t kRadioDelay = 10000;  // Time of radio communication in microseconds
+const String kRadioRequestCode = "$$$";
+
+/*
+ * Used to activate the receivers
+ */
+void activateUltrasonic(int trigPin);
+/*
+ * Sends radio signal to user's device to cause it to emit an ultrasonic pulse.
+ */
+void requestSignal();
+/*
+ * Waits for signal to be received on both receivers and returns the time since
+ * `startTime` it took in the `timeLeft` and `timeRight` pointers. If no signal
+ * is received, the respective output is set to 0xFFFFFFFF (2^32 - 1).
+ */
+void measureTimes(uint32_t startTime, uint32_t* timeLeft, uint32_t* timeRight);
+/*
+ * Uses port manipulation to read all echo pins (specified by the `mask`)
+ * extremely fast (~0.1 us).
+ * (`PIND` is a byte containing values of pins 0-7.)
+ */
+uint8_t getEcho(uint8_t mask) {return PIND & mask;}
+
+void setup() 
+{
+  // Radio setup
+  pinMode(8,OUTPUT); // switch off the radio
+  digitalWrite(8,HIGH);
+  pinMode(4,OUTPUT); // switch on the radio
+  digitalWrite(4,LOW); // ensure the radio is not sleeping
+  Serial.begin(115200);
+
+  // Tracking pins setup
+  pinMode(trigAllPin, OUTPUT);
+  digitalWrite(trigAllPin, LOW);
+  pinMode(kLeftEchoPin, INPUT);
+  pinMode(kRightEchoPin, INPUT);
 }
 
-int getDirection(long diff) {
-  if (diff < 0) return -1;
-  if (diff > 0) return 1;
-  return 0;
+void loop() 
+{
+  activateUltrasonic(trigAllPin);
+  delayMicroseconds(600);
+  uint32_t t0 = micros();
+  // Both echo pins should be high now
+  if (getEcho(kBoth) != kBoth)
+    Serial.print("ERROR: Unexpected echo state");
+  requestSignal();
+
+  // Now we have about 20 ms to do stuff
+
+  uint32_t timeLeft, timeRight;
+  measureTimes(t0, &timeLeft, &timeRight);
+
+  // Now we have timeLeft and timeRight. We can send them to EV3 or store them
+  // in global variables and send in the next iteration. We can also do other
+  // stuff here.
+
+  // Testing code. Prints distance to each receiver in mm.
+  digitalWrite(8,LOW);
+  Serial.print(timeLeft*0.34);
+  Serial.print("\t");
+  Serial.println(timeRight*0.34);
+  Serial.print("\t");
+  Serial.println(((long)timeLeft - (long)timeRight)*0.34);
+  Serial.flush();
+  delay(1);
+  digitalWrite(8,HIGH);
+
+  delay(1000);  // TODO: should probably be removed or reduced
 }
 
-void loop() {
-  long newdiff = 0;
-  for (int i =0; i< 4; i++){
-    newdiff += recordDifference()/4;
-  }
-  
-  int newDirection = getDirection(newdiff);
-  if (direction == -newDirection) {
-    //changed side
-    turnAdjustment = 0;
-    direction = newDirection;
-  } else {
-      //turn faster
-      if (newdiff > diff) turnAdjustment ++;
-      //turn slower
-      else if (newdiff < diff) turnAdjustment--;
-  }
-  diff = newdiff;
-
-  if (diff < 0) { Serial.print("L "); Serial.println(turnAdjustment);}
-  else if (diff > 0){ Serial.print("R "); Serial.println(turnAdjustment);} 
-  else Serial.println("N");
-  
-}
-
-void listen() {
-  digitalWrite(pinTrig, LOW);
+void activateUltrasonic(int trigPin)
+{
+  digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
-  digitalWrite(pinTrig, HIGH);
+  digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
-  digitalWrite(pinTrig, LOW);
+  digitalWrite(trigPin, LOW);
+}
+
+void requestSignal() {
+  Serial.print(kRadioRequestCode);
+  Serial.flush();
 }
 
 long recordDifference() {
-  //long timeout = 0;
   boolean lFire = false;
   boolean rFire = false;
   long lPoint = 0;
   long rPoint=0;
+  //Serial.println("Synchronizing....");
+  
+  //Serial.println("Done!");
   listen();
+  while (sync()==-1);
   //wait till echo pin goes up
-  while ((digitalRead(pinEchoR) == 0));
+  //Serial.println("Wait E pin....");
+  //while ((digitalRead(pinEchoR) == 0));
+  delayMicroseconds(600);
+  //Serial.println("E pin up!");
   long startTime = micros();
-  while ((lFire == 0) || (rFire == 0)){
-    if ((digitalRead(pinEchoR) == 0) && !rFire){
+  //Serial.println("Tracking....");
+  while (!rFire){
+  //while (!lFire || !rFire){
+    //Serial.println(digitalRead(pinEchoR));
+    if ((digitalRead(pinEchoR) == LOW) && !rFire){
+      Serial.println("RF!");
       rFire = true;
       rPoint = micros() - startTime;
     }
-    if ((digitalRead(pinEchoL) == 0) && !lFire){
+    /*if ((digitalRead(pinEchoL) == LOW) && !lFire){
+      //Serial.println("LF!");
       lFire = true;
       lPoint = micros() - startTime;
-    }
+    }*/
   }
+  //Serial.println(rPoint*0.34);
   if (lPoint > 110000 || rPoint > 110000) return 0;
+  //Serial.println(lPoint- rPoint);
   return lPoint- rPoint;
 }
 
+void measureTimes(uint32_t startTime, uint32_t* timeLeft, uint32_t* timeRight)
+{
+  uint8_t echo = getEcho(kBoth);
+  // Both echo pins should still be high
+  if (echo != kBoth)
+    Serial.print("ERROR: Listening too late");
+
+  *timeLeft = 0xFFFFFFFF;   // Max number
+  *timeRight = 0xFFFFFFFF;  // Max number
+  // Wait for echo pins to go low and note times
+  while (echo != 0x00) {
+    echo = getEcho(kBoth);
+    if ((*timeLeft == 0xFFFFFFFF) && ((echo & kLeft) == 0))
+      *timeLeft = micros() - startTime;
+    if ((*timeRight == 0xFFFFFFFF) && ((echo & kRight) == 0))
+      *timeRight = micros() - startTime;
+  }
+
+  // Check for timeouts
+  if (*timeLeft > kReceiverTimeout) *timeLeft = 0xFFFFFFFF;
+  if (*timeRight > kReceiverTimeout) *timeRight = 0xFFFFFFFF;
+
+  // Check radio delay
+  if (*timeLeft < kRadioDelay) {
+    Serial.print("ERROR: Radio delay too high. timeLeft=");
+    Serial.println(*timeLeft);
+    *timeLeft = 0xFFFFFFFF;
+  }
+  if (*timeRight < kRadioDelay) {
+    Serial.print("ERROR: Radio delay too high. timeRight=");
+    Serial.println(*timeRight);
+    *timeRight = 0xFFFFFFFF;
+  }
+
+  // Adjust for radio delay
+  if (*timeLeft != 0xFFFFFFFF)
+    *timeLeft -= kRadioDelay;
+  if (*timeRight!= 0xFFFFFFFF)
+    *timeRight -= kRadioDelay;
+}
