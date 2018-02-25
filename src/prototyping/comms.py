@@ -69,6 +69,7 @@ class Message(list):
 
 
     ids = [4294967292,4294967291]
+    no_sig = 0xFFFFFFFF
     timestamp = 0
 
     def is_well_formed(self):
@@ -78,6 +79,7 @@ class Message(list):
         wf = True
         if not self[0] == self.open_message: wf = False
         if not self[-1] == self.close_message: wf = False
+        if self.get_left() == no_sig or self.get_right() == no_sig: wf = False
 
         if not self[1] in self.ids: wf = False
 
