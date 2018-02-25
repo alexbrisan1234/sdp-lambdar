@@ -20,7 +20,7 @@ class PID:
         # Windup Guard
         self.__windup_guard = 20.0
 
-    def update(self, left_distance, right_distance, current_time):
+    def update(self, process_value, current_time):
         """Calculates PID value for given reference feedback
         .. math::
             u(t) = K_p e(t) + K_i \int_{0}^{t} e(t)dt + K_d {de}/{dt}
@@ -28,7 +28,7 @@ class PID:
            :align:   center
            Test PID with Kp=1.2, Ki=1, Kd=0.001 (test_pid.py)
         """ 
-        error = left_distance - right_distance
+        error = process_value - self.__SetPoint
         delta_time = current_time - self.__last_time
         delta_error = error - self.__last_error
 
@@ -46,17 +46,17 @@ class PID:
             self.__DTerm = delta_error / delta_time
 
         # Update time and error values
-        self.last_time = current_time
-        self.last_error = error
+        self.__last_time = current_time
+        self.__last_error = error
 
         output = self.__PTerm + (self.__Ki * self.__ITerm) + (self.__Kd * self.__DTerm)
-        return output/self.__windup_guard
+        return output
 
     def update_tracking(self, left_distance, right_distance, current_time):
-        return self.update(left_distance, right_distance, current_time)
+        return self.update(left_distance - right_distance, current_time)
 
     def update_collision_avoidance(self, distance, current_time):
-        return self.update(distance, self.__SetPoint, current_time)
+        return self.update(distance, current_time)
 
     def setKp(self, proportional_gain):
         """Determines how aggressively the PID reacts to the current error with setting Proportional Gain"""
