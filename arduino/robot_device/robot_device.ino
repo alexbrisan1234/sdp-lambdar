@@ -4,6 +4,9 @@ const int kLeftEchoPin = 6;  // needs to be between 2 and 7 (inclusive)
 const int kRightEchoPin = 7;  // needs to be between 2 and 7 (inclusive)
 const uint32_t kReceiverTimeout = 110000;
 
+
+#define DEBUG 1
+
 // Masks for echo pins
 const uint8_t kLeft = (1 << kLeftEchoPin);
 const uint8_t kRight = (1 << kRightEchoPin);
@@ -81,7 +84,7 @@ void loop()
   uint32_t t0 = micros();
   // Both echo pins should be high now
   if (getEcho(kBoth) != kBoth)
-    Serial.print("ERROR: Unexpected echo state");
+    Serial.println("ERROR: Unexpected echo state");
   requestSignal();
 
   // Now we have about 20 ms to do stuff
@@ -93,7 +96,7 @@ void loop()
   // in global variables and send in the next iteration. We can also do other
   // stuff here.
 
-  // Testing code. Prints distance to each receiver in mm.
+  // Send data over serial to the ev3 brick
   digitalWrite(8,LOW);
   sendData(td);
   delay(1);
@@ -112,7 +115,7 @@ void activateUltrasonic(int trigPin)
 }
 
 void requestSignal() {
-  Serial.print(kRadioRequestCode);
+  Serial.println(kRadioRequestCode);
   Serial.flush();
 }
 
@@ -121,7 +124,7 @@ void measureTimes(uint32_t startTime, uint32_t* timeLeft, uint32_t* timeRight)
   uint8_t echo = getEcho(kBoth);
   // Both echo pins should still be high
   if (echo != kBoth)
-    Serial.print("ERROR: Listening too late");
+    Serial.println("ERROR: Listening too late");
 
   *timeLeft = 0xFFFFFFFF;   // Max number
   *timeRight = 0xFFFFFFFF;  // Max number
@@ -140,12 +143,12 @@ void measureTimes(uint32_t startTime, uint32_t* timeLeft, uint32_t* timeRight)
 
   // Check radio delay
   if (*timeLeft < kRadioDelay) {
-    Serial.print("ERROR: Radio delay too high. timeLeft=");
+    Serial.println("ERROR: Radio delay too high. timeLeft=");
     Serial.println(*timeLeft);
     *timeLeft = 0xFFFFFFFF;
   }
   if (*timeRight < kRadioDelay) {
-    Serial.print("ERROR: Radio delay too high. timeRight=");
+    Serial.println("ERROR: Radio delay too high. timeRight=");
     Serial.println(*timeRight);
     *timeRight = 0xFFFFFFFF;
   }
@@ -169,5 +172,3 @@ void sendData(struct timeData td) {
     Serial.println(String(closeMsg));
     Serial.flush();
 }
-
-

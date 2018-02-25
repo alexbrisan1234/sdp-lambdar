@@ -2,19 +2,13 @@
 import serial
 import time
 
-open_message = 4294967294
-close_message = 4294967295
-
 
 class Serial_Comm:
-    def __init__(self, oport="/dev/ttyACM0", obaudrate=115200, otimeout=None):
+    def __init__(self, oport="/dev/ttyACM0", obaudrate=9600, otimeout=None):
         self.ser = serial.Serial(port=oport, baudrate=obaudrate, timeout=otimeout)
 
         # Set the signal codes, identify the beginning and end of a signal
         self.no_sig = 4294967295
-
-        self.open_message = 4294967294
-        self.close_message = 4294967293
 
     def read_message(self):
         '''
@@ -24,27 +18,25 @@ class Serial_Comm:
 
         # Message is essentially a list with some checking functions
         msg = Message()
-        message_is_open = False
-        message_is_ended = False
-        while not message_is_ended:
+        while not msg.is_closed():
             try:
-                opcode = int(self.ser.readline().strip())
+                sm = self.ser.readline().strip()
+                # print(sm)
+                opcode = int(sm)
+                # print(opcode)
                 self.ser.flush();
 
-                if opcode == self.open_message:
-                    msg = []
-                    self.message_is_open = True
-
-                if message_is_open:
-                    msg.append(opcode)
+                msg.append(opcode)
 
                     # Ensures the message is being formed correctly
-                    if msg.is_well_formed():
-                        return msg
+                if msg.is_well_formed():
+                    print('Message was formed')
+                    return msg
 
             except ValueError:
                 continue
             except KeyboardInterrupt:
+                print('Aborting Robot Operation')
                 exit()
 
     def send_to_serial(self, message):
@@ -65,14 +57,20 @@ class Message(list):
     # Give the type of the message
     msg_type = None
 
+    open_message = 4294967294
+    close_message = 4294967293
+
+
     ids = [4294967292,4294967291]
     timestamp = 0
 
     def is_well_formed(self):
         'Checks if the message is fit to pass to planning'
+        if len(self) < 3: return False
+
         wf = True
-        if not self[0] == open_message: wf = False
-        if not self[-1] == close_message: wf = False
+        if not self[0] == self.open_message: wf = False
+        if not self[-1] == self.close_message: wf = False
 
         if not self[1] in self.ids: wf = False
 
@@ -83,6 +81,9 @@ class Message(list):
         ''' 
             Extension of list append assigns a type to the class
         '''
+        if not self.is_open() and item != self.open_message:
+            return
+
         if len(self) == 0:
             self.timestamp = int(round(time.time() * 1000))
 
@@ -92,8 +93,25 @@ class Message(list):
             if self[1] == self.ids[1]:
                 self.msg_type = 'infrared'
 
-        super(Message, list).append(item)
+        super(Message, self).append(item)
 
+    def is_open(self):
+        try:
+            if self[0] == self.open_message and self[-1] != self.close_message:
+                return True
+        except IndexError:
+            pass
+
+        return False
+
+    def is_closed(self):
+        try:
+            if self[-1] == self.close_message:
+                return True
+        except IndexError:
+            pass
+
+        return False
 
     def get_left(self):
         if self.msg_type != 'ultrasonic':
