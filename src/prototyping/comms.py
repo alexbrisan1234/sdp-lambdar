@@ -126,6 +126,13 @@ class Message(list):
 
         return self[2]
 
+
+    def infrared_sensor(self, sensor_no):
+        if self.msg_type != 'infrared':
+            raise ValueError
+
+        return self[sensor_no+2]
+
     def get_right(self):
         if self.msg_type != 'ultrasonic':
             raise ValueError

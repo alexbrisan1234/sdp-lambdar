@@ -30,7 +30,7 @@ class Arnold:
                     self.ultra_data = new_data[0]
 
                 if new_data[1] != None:
-                    self.infra_data = new_data[1]
+                    self.ultra_data = new_data[1]
 
                 print(self.ultra_data)
                 

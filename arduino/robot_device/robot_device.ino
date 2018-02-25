@@ -90,7 +90,7 @@ void loop()
   // Now we have about 20 ms to do stuff
 
   struct timeData td;
-  measureTimes(t0, &td.leftUD, &td.rightUD);
+  measureTimes(t0, &(td.leftUD), &(td.rightUD));
 
   // Now we have td.leftUD and td.rightUD. We can send them to EV3 or store them
   // in global variables and send in the next iteration. We can also do other
