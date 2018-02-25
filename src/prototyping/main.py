@@ -24,18 +24,18 @@ class Arnold:
         while True:
             try:
                 print('Getting Message')
-                next_message = self.ser.read_message()
+                new_data = self.ser.read_message()
+
+                if new_data[0] != None:
+                    self.ultra_data = new_data[0]
+
+                if new_data[1] != None:
+                    self.infra_data = new_data[1]
+
+                print(self.ultra_data)
                 
-                print(next_message)
-
-                # Seperate data into ultrasonic and infrared
-                if next_message.msg_type == 'ultrasonic':
-                    self.ultra_data = next_message
-                elif next_message.msg_type == 'infrared':
-                    self.infra_data = next_message
-
                 # If the data from the ultrasonics is old then switch modes
-                if int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
+                if self.ultra_data != None and int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
                     self.acting_mode = self.Mode.OBSTACLE
                 else:
                     self.acting_mode = self.Mode.FOLLOW

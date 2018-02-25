@@ -17,27 +17,34 @@ class Serial_Comm:
         self.initiate_transmission()
 
         # Message is essentially a list with some checking functions
-        msg = Message()
-        while not msg.is_closed():
-            try:
-                sm = self.ser.readline().strip()
-                # print(sm)
-                opcode = int(sm)
-                # print(opcode)
-                self.ser.flush();
+        msgs = (None, None)
+        while self.ser.inWaiting() > 0:
+            msg = Message()
+            while not msg.is_closed():
+                try:
+                    sm = self.ser.readline().strip()
+                    # print(sm)
+                    opcode = int(sm)
+                    # print(opcode)
+                    self.ser.flush();
 
-                msg.append(opcode)
+                    msg.append(opcode)
 
-                    # Ensures the message is being formed correctly
-                if msg.is_well_formed():
-                    print('Message was formed')
-                    return msg
+                        # Ensures the message is being formed correctly
+                    if msg.is_well_formed():
+                        print('Message was formed')
+                        if msg.msg_type == 'ultrasonic':
+                            msgs = (msg, msgs[1])
+                        elif msg.msg_type == 'infrared':
+                            msgs = (msgs[0], msg)
+                        break
 
-            except ValueError:
-                continue
-            except KeyboardInterrupt:
-                print('Aborting Robot Operation')
-                exit()
+                except ValueError:
+                    continue
+                except KeyboardInterrupt:
+                    print('Aborting Robot Operation')
+                    exit()
+        return msgs
 
     def send_to_serial(self, message):
         self.initiate_transmission()
