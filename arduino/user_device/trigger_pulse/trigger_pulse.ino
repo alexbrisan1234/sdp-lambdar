@@ -11,7 +11,7 @@ void activateUltrasonic(int trigPin)
 
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(9600);
   pinMode(8,OUTPUT); // switch on the radio
   digitalWrite(8,HIGH);
   pinMode(4,OUTPUT); // switch on the radio
