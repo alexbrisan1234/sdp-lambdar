@@ -17,6 +17,7 @@ class PID:
         # Timestamp of last measurement
         self.__last_time = 0
         self.__last_error = 0.0
+        self.output = 0.0
         # Windup Guard
         self.__windup_guard = 20.0
 
@@ -28,8 +29,11 @@ class PID:
            :align:   center
            Test PID with Kp=1.2, Ki=1, Kd=0.001 (test_pid.py)
         """ 
-        error = process_value - self.__SetPoint
         delta_time = current_time - self.__last_time
+        # Don't update if the datapoint is the same or older than the previous one
+        if delta_time <= 0:
+            return self.output
+        error = process_value - self.__SetPoint
         delta_error = error - self.__last_error
 
         self.__PTerm = self.__Kp * error
@@ -41,16 +45,14 @@ class PID:
         elif (self.__ITerm > self.__windup_guard):
              self.__ITerm = self.__windup_guard
 
-        self.__DTerm = 0.0
-        if delta_time > 0:
-            self.__DTerm = delta_error / delta_time
+        self.__DTerm = delta_error / delta_time
 
         # Update time and error values
         self.__last_time = current_time
         self.__last_error = error
 
-        output = self.__PTerm + (self.__Ki * self.__ITerm) + (self.__Kd * self.__DTerm)
-        return output
+        self.output = self.__PTerm + (self.__Ki * self.__ITerm) + (self.__Kd * self.__DTerm)
+        return self.output
 
     def update_tracking(self, left_distance, right_distance, current_time):
         return self.update(left_distance - right_distance, current_time)
