@@ -50,7 +50,7 @@ class PID:
         self.last_error = error
 
         output = self.__PTerm + (self.__Ki * self.__ITerm) + (self.__Kd * self.__DTerm)
-        return output
+        return output/self.__windup_guard
 
     def update_tracking(self, left_distance, right_distance, current_time):
         return self.update(left_distance, right_distance, current_time)
