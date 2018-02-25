@@ -21,6 +21,22 @@ class TestMotor:
                 }
             ]
         } == test_output
+                
+    # def test_polarity(self):
+    #     def test_code():
+    #         m = Motor('A', -1)
+    #         m . run(10, 10)
+
+    #     test_output = TestHelpers() . get_motor_output(test_code)
+
+    #     assert {
+    #         'A': [
+    #             {
+    #                 'speed': '-10',
+    #                 'duration': '0.01'
+    #             }
+    #         ]
+    #     } == test_output
 
     def test_two_motors(self):
         def code():
@@ -46,5 +62,3 @@ class TestMotor:
             ]
         } == test_output
             
-        
-        
