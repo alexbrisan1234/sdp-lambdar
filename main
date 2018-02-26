@@ -1,8 +1,8 @@
 #! /usr/bin/python3
-from comms import Serial_Comm
+from src.code.communication.comms import Serial_Comm
 from enum import Enum
-from motor import *
-from pid import PID
+from src.code.control.motor import *
+from src.code.control.pid import PID
 import time
 
 class Arnold:
