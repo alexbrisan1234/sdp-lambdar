@@ -1,3 +1,4 @@
+#! /usr/bin/python3
 from comms import Serial_Comm
 from enum import Enum
 from motor import *
@@ -13,11 +14,11 @@ class Arnold:
         FOLLOW = 1
         OBSTACLE = 2
 
-    def __init__(self, cs=500, dur=20000):
+    def __init__(self, cs=200, dur=5000):
         self.motors = ArnoldMotors({'frontLeft':'A','frontRight':'B','rearLeft':'C','rearRight':'D'});
         self.acting_mode = self.Mode.FOLLOW
         self.ser = Serial_Comm()
-        self.pid = PID()
+        self.pid = PID(P=0.5, I=0.0, D=0.0)
         self.constant_speed = cs
         self.left_speed = cs
         self.right_speed = cs
@@ -46,6 +47,7 @@ class Arnold:
                     self.acting_mode = self.Mode.OBSTACLE
                 else:
                     self.acting_mode = self.Mode.FOLLOW
+                self.acting_mode = self.Mode.FOLLOW
 
                 # Update motion based on current
                 self.actuate()
@@ -58,35 +60,49 @@ class Arnold:
         'Logic for selecting an actuation strategy and activating motors'
         if self.acting_mode == self.Mode.FOLLOW:
             # get the pid output to tune the speed and direction
-            self.pid_output = self.pid.update_tracking(self.ultra_data[2], self.ultra_data[3], self.ultra_data.timestamp)
+            self.pid_output = self.pid.update_tracking(self.ultra_data.get_left(),
+                                                       self.ultra_data.get_right(),
+                                                       self.ultra_data.timestamp)
             # turn left, allow for a small mistake
-            if(pid_output>0.0001):
-                self.left_speed = pid_output*self.const_speed
+            '''if(pid_output>0.0001):
+                self.left_speed = pid_output*self.constant_speed
                 self.right_speed = self.constant_speed
                 self.motors.turn(self.duration, self.left_speed, self.right_speed)
             elif(pid_output<-0.0001):
                 # turn right
-                self.right_speed = -pid_output*self.const_speed
+                self.right_speed = -pid_output*self.constant_speed
                 self.left_speed = self.constant_speed
                 self.motors.turn(self.duration, self.left_speed, self.right_speed)
                 # if the error is *almost* corrected
             else: 
-                self.motors.move_forwards(self.const_speed, self.const_speed)
+                self.motors.move_forwards(self.constant_speed, self.constant_speed)#'''
+            spd_left = self.constant_speed + self.pid_output/2.0
+            spd_right = self.constant_speed - self.pid_output/2.0
+            if spd_left > 1000:
+                spd_left = 1000
+            if spd_left < -1000:
+                spd_left = -1000
+            if spd_right > 1000:
+                spd_right = 1000
+            if spd_right < -1000:
+                spd_right = -1000
+            self.motors.turn(self.duration, spd_left, spd_right)
+            
         else:
             # check which side of the wall you're at, assume the robot is moving straight
             if(self.infra_data[2]!=0): # right sensor from arnold's perspective
                 self.obstacle_position = 1
                 self.obstacle_distance = self.infra_data[2]
-                self.motors.move_forwards(self.const_speed, self.const_speed) 
+                self.motors.move_forwards(self.constant_speed, self.constant_speed) 
             elif(self.infra_data[6]!=0): 
                 self.obstacle_position = 0    
                 self.obstacle_distance = self.infra_data[6]
-                self.motors.move_forwards(self.const_speed, self.const_speed)
+                self.motors.move_forwards(self.constant_speed, self.constant_speed)
             # if readings from both sides are 0 and obstacle was on the left side   
             elif(self.obstacle_position == 0): 
-                self.motors.turn(2000, const_speed/2, const_speed)
+                self.motors.turn(2000, constant_speed/2, constant_speed)
             else:
-                self.motors.turn(2000, const_speed, const_speed/2)    
+                self.motors.turn(2000, constant_speed, constant_speed/2)    
 
 
 if __name__ == '__main__':
