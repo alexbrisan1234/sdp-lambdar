@@ -42,7 +42,7 @@ float convertVoltageToDistance(int voltage){
 struct IRData listenForIR(){
   struct IRData IRData;
   for(int i=0;i<5;i++){
-    IRData.distances[i] = analogRead(ir_receiver_pins[i]);
+    IRData.distances[i] = convertVoltageToDistance(analogRead(ir_receiver_pins[i]));
   }
   return IRData;
 }
