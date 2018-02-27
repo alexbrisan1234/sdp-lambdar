@@ -121,13 +121,12 @@ void loop()
   // Send data over serial to the ev3 brick
   digitalWrite(8,LOW);
   sendUltraData();
+  listenForIR();
+  sendIRData();
   delay(1);
   digitalWrite(8,HIGH);
   
-  listenForIR();
-  sendIRData();
-  
-  delay(1000);  // TODO: should probably be removed or reduced
+  delay(100);  // TODO: should probably be removed or reduced
 }
 
 void requestSignal() {
