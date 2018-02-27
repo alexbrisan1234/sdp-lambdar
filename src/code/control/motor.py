@@ -9,18 +9,20 @@ class Motor:
             self.motor.polarity = 'inversed'
         else:
             self.motor.polarity = 'normal'
-        
-    def run(self, duration, speed):
-        self.motor.run_timed(time_sp = duration, speed_sp = speed)
-            
-    def stop(self):
-        self.motor.stop()
-        
-    ''' 
+
+    #speed is a value from -1050 to 1050
+    def run(self, speed):
+        self.motor.run_forever(speed_sp = speed)
+
+    #action belongs {brake, coast, hold}
+    def stop(self, action='brake'):
+        self.motor.stop(stop_action=action)
+
+    '''
     measures the speed according to revs / sec of the motor
     NOTICE: even if there's something blocking the robot
     the wheel keeps turning and hence the measurement is inaccurate
-    ''' 
+    '''
     def getSpeed(self):
         wheelDiameter = 8.2 #cm
         wheelCircumference = 2*pi*wheelDiameter/2 #cm
@@ -31,7 +33,7 @@ class Motor:
         #instantaneous speed
         speed = wheelCircumference * rps
         return abs(round(speed))
-        
+
 class ArnoldMotors:
     def __init__(self, portDict):
         #front motors are facing opposite the rears
@@ -42,26 +44,52 @@ class ArnoldMotors:
         self . left = [self.frontLeft, self.rearLeft]
         self . right = [self.frontRight, self.rearRight]
         self . motors = self.left + self.right
-        
-    def turn(self, duration, speedLeft, speedRight):
+
+    def move(self):
+        speeds = self.calculateSpeeds()
+        speedLeft = speeds[0]
+        speedRight = speeds[1]
         # Run the left side
         for leftMotor in self . left:
-            leftMotor . run(duration, speedLeft)
-
+            leftMotor . run(speedLeft)
         # Run the right side
         for rightMotor in self . right:
-            rightMotor . run(duration, speedRight)
+            rightMotor . run(speedRight)
 
-    def move_forwards(self, duration, speed):
-        for motor in self . motors:
-            motor . run(duration, speed)
+    def calculateSpeeds(self):
+        speedLeft = self.speed - self.tr/2
+        speedRight = self.speed + self.tr/2
+        difference = 0;
+        if speedRight > 1000 or speedLeft > 1000:
+            #overflow; find maximum distance fromm 1000
+            difference = max(speedRight - 1000, speedLeft - 1000)
+        elif speedRight < -1000 or speedLeft < -1000:
+            #underflow; find min distance fromm -1000
+            difference = min(speedRight + 1000, speedLeft + 1000)
+        #adjust boundaries: sign * abs adjusted value, rounded if needed
+        speedRight = min(abs(speedRight - difference), 1000) * sign(speedRight)
+        speedLeft = min(abs(speedLeft - difference), 1000) * sign(speedLeft)
+        if (abs(tr) <= 2000): assert (tr == speedRight - speedLeft)
+        return (speedLeft, speedRight)
 
-    def move_backwards(self, duration, speed):
-        self.move_forwards(duration, -speed)
-            
+    def sign(self, number):
+        if number < 0: return -1
+        return 1
+
+    def set_parameters(self, speed, tr):
+        self.speed = speed
+        self.tr = tr
+
+    def move_forwards(self, speed):
+        self.set_parameters(speed, 0)
+        self.move()
+
+    def move_backwards(self, speed):
+        self.move_forwards(-speed)
+
     def isMoving(self):
         return any([m.motor.is_running for m in self.motors])
 
-    def stop(self):
+    def stop(self, action = 'brake'):
        for motor in self.motors:
-           motor.stop()
+           motor.stop(action)
