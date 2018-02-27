@@ -79,7 +79,7 @@ class Message(list):
         wf = True
         if not self[0] == self.open_message: wf = False
         if not self[-1] == self.close_message: wf = False
-        if self.get_left() == no_sig or self.get_right() == no_sig: wf = False
+        if self.get_left() == self.no_sig or self.get_right() == self.no_sig: wf = False
 
         if not self[1] in self.ids: wf = False
 

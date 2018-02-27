@@ -2,7 +2,7 @@ class PID:
     """PID Controller
     """
 
-    def __init__(self, P=0.2, I=0.0, D=0.0, SP=1):
+    def __init__(self, P=0.2, I=0.0, D=0.0, SP = 1):
 
         #coefficients for the terms
         self.__Kp = P
@@ -14,6 +14,7 @@ class PID:
         self.__DTerm = 0.0
         # Distance from the obstacle
         self.__SetPoint = SP
+        
         # Timestamp of last measurement
         self.__last_time = 0
         self.__last_error = 0.0
