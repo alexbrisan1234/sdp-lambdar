@@ -108,6 +108,7 @@ class Arnold:
                 self.motors.turn(self.duration, constant_speed/2, constant_speed)
             else:
                 self.motors.turn(self.duration, constant_speed, constant_speed/2)    
+
         if self.acting_mode == self.Mode.WAIT:
             if __debug__:
                 print('Wait Mode')
