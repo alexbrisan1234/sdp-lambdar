@@ -8,9 +8,9 @@ const uint32_t kReceiverTimeout = 110000;
 
 // IR Settings
 int ir_receiver_pins[] = {A1, A2, A3, A4, A5};
-long ir_data[] = {0, 0, 0, 0, 0};
+uint32_t ir_data[] = {0, 0, 0, 0, 0};
 
-const unsigned long iID = 0xFFFFFFFB;
+const uint32_t iID = 0xFFFFFFFB;
 
 // Ultrasonic Settings
 struct TimeData {
@@ -21,7 +21,7 @@ struct TimeData {
 struct TimeData uTimeData;
 
 // This ID identifies ultrasonic data
-const unsigned long uID = 0xFFFFFFFC;
+const uint32_t uID = 0xFFFFFFFC;
 
 // Masks for echo pins
 const uint8_t kLeft = (1 << kLeftEchoPin);
@@ -34,11 +34,11 @@ const String kRadioRequestCode = "$$$";
 
 // Comm Settings
 // Code for no signal received
-const unsigned long kNoSig = 0xFFFFFFFF;
+const uint32_t kNoSig = 0xFFFFFFFF;
 // Code identifies beginning of message
-const unsigned long kOpenMsg = 0xFFFFFFFE;
+const uint32_t kOpenMsg = 0xFFFFFFFE;
 // Code identifies end of message
-const unsigned long kCloseMsg = 0xFFFFFFFD;
+const uint32_t kCloseMsg = 0xFFFFFFFD;
 
 /*
  * Used to activate the receivers
@@ -64,7 +64,7 @@ uint8_t getEcho(uint8_t mask) {return PIND & mask;}
 /*
  * Converst a voltage to a distance
  */
-float convertVoltageToDistance(int voltage);
+uint32_t convertVoltageToDistance(int voltage);
 
 /*
  * Listens for IR signal
@@ -187,9 +187,9 @@ void activateUltrasonic(int trigPin)
 }
 
 /* IR Functions */
-long convertVoltageToDistance(int voltage){
+uint32_t convertVoltageToDistance(int voltage){
   if (voltage == 0) return kNoSig;
-  return (long)(63438.5*pow(voltage, -1.15)+0.5);
+  return (uint32_t)(63438.5*pow(voltage, -1.15)+0.5);
 }
 
 void listenForIR(){
