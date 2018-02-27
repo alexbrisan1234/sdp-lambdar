@@ -16,6 +16,7 @@ const unsigned long closeMsg = 0xFFFFFFFD;
 
 void setup(){
    Serial.begin(9600);
+   sendIRData(IRData);
 }
 
 void loop(){
@@ -29,7 +30,6 @@ float convertVoltageToDistance(int voltage){
 }
 
 struct IRData listenForIR(){
-  struct IRData IRData;
   for(int i=0;i<5;i++){
     IRData.distances[i] = convertVoltageToDistance(analogRead(ir_receiver_pins[i]));
   }
