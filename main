@@ -55,6 +55,7 @@ class Arnold:
                     if self.infra_data != None: print('Infrared: ', self.infra_data)
 
 
+
                 # If the data from the ultrasonics is old then switch modes
                 if self.ultra_data != None and int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
                     self.acting_mode = self.Mode.OBSTACLE
@@ -63,6 +64,7 @@ class Arnold:
                     self.acting_mode = self.Mode.FOLLOW
 
                 # Update motion based on current
+
                 if self.ultra_data != None and self.infra_data != None:
                     self.actuate()
                 elif __DEBUG__:
@@ -110,6 +112,7 @@ class Arnold:
                 self.motors.turn(self.duration, constant_speed, constant_speed/2)    
 
         if self.acting_mode == self.Mode.WAIT:
+
             if __DEBUG__:
                 print('Wait Mode')
 

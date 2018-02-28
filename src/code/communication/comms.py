@@ -70,7 +70,6 @@ class Serial_Comm:
 class Message(list):
     # Give the type of the message
     msg_type = None
-
     no_sig = 0xFFFFFFFF
     timestamp = 0
 
@@ -93,6 +92,7 @@ class Message(list):
 
         for d in msg:
             self.append(d)
+
 
     def get_infrared_sensor_data(self, sensor_no):
         if self.msg_type != 'infrared':
