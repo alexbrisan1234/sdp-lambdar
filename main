@@ -57,8 +57,8 @@ class Arnold:
 
                 # If the data from the ultrasonics is old then switch modes
                 if self.ultra_data != None and int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
-                    # self.acting_mode = self.Mode.OBSTACLE
-                    print('Entering Obstacle Avoidance Mode')
+                    self.acting_mode = self.Mode.OBSTACLE
+                    if __DEBUG__: print('Entering Obstacle Avoidance Mode')
                 else:
                     self.acting_mode = self.Mode.FOLLOW
 
