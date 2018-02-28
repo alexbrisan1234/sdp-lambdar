@@ -22,17 +22,16 @@ class Serial_Comm:
             msg = Message()
             while not msg.is_closed():
                 try:
+
+                    # Receive the message as a string
                     sm = self.ser.readline().strip()
-                    # print(sm)
+                    # Convert to integer opcode
                     opcode = int(sm)
-                    # print(opcode)
                     self.ser.flush();
 
                     msg.append(opcode)
 
-                        # Ensures the message is being formed correctly
                     if msg.is_well_formed():
-                        print('Message was formed')
                         if msg.msg_type == 'ultrasonic':
                             msgs = (msg, msgs[1])
                         elif msg.msg_type == 'infrared':
@@ -64,11 +63,11 @@ class Message(list):
     # Give the type of the message
     msg_type = None
 
-    open_message = 4294967294
-    close_message = 4294967293
+    open_message = 0xFFFFFFFE
+    close_message = 0xFFFFFFFD
 
 
-    ids = [4294967292,4294967291]
+    ids = {'ultrasonic':0xFFFFFFFC,'infrared':0xFFFFFFFB}
     no_sig = 0xFFFFFFFF
     timestamp = 0
 
@@ -97,9 +96,9 @@ class Message(list):
             self.timestamp = int(round(time.time() * 1000))
 
         if len(self) > 2:
-            if self[1] == self.ids[0]:
+            if self[1] == self.ids['ultrasonic']:
                 self.msg_type = 'ultrasonic'
-            if self[1] == self.ids[1]:
+            if self[1] == self.ids['infrared']:
                 self.msg_type = 'infrared'
 
         super(Message, self).append(item)
@@ -122,18 +121,17 @@ class Message(list):
 
         return False
 
-    def get_left(self):
-        if self.msg_type != 'ultrasonic':
-            raise ValueError
-
-        return self[2]
-
-
     def get_infrared_sensor_data(self, sensor_no):
         if self.msg_type != 'infrared':
             raise ValueError
 
         return self[sensor_no+2]
+
+    def get_left(self):
+        if self.msg_type != 'ultrasonic':
+            raise ValueError
+
+        return self[2]
 
     def get_right(self):
         if self.msg_type != 'ultrasonic':
@@ -144,5 +142,8 @@ class Message(list):
 if __name__ == '__main__':
     ard = Serial_Comm()
 
-    ard.read_from_serial()
+    while True:
+        msgs = ard.read_from_serial()
+        print('Ultrasonic: ', msg[0])
+        print('Infrared: ', msg[1])
 

@@ -5,21 +5,30 @@ from src.code.control.motor import *
 from src.code.control.pid import PID
 import time
 
+
+__debug__ = True
+
 class Arnold:
     # Arnold's to main sensory inputs
     ultra_data = None
     infra_data = None
 
     class Mode(Enum):
-        FOLLOW = 1
-        OBSTACLE = 2
+        FOLLOW = 1      # Default operation mode. Robot will blindly follow the carrot
+        OBSTACLE = 2    # Activates on signal loss or path blockage. Robot switches to wall following
+        WAIT = 3        # Halt actuation and wait for a usable
 
     def __init__(self, cs=200, dur=5000, maxsp = 1000):
         self.motors = ArnoldMotors({'frontLeft':'A','frontRight':'B','rearLeft':'C','rearRight':'D'});
         self.acting_mode = self.Mode.FOLLOW
-        self.ser = Serial_Comm()
-        self.pid_tracking = PID(P=0.5, I=0.0, D=0.0)
-        self.pid_avoidance = PID(P=0.5, I=0.0, D=0.0, SP=10)
+        # Catch error for incorrect serial port
+        try:
+            self.ser = Serial_Comm(oport="/dev/ttyACM0")
+        except FileNotFoundError: 
+            self.ser = Serial_Comm(oport="/dev/ttyACM1")
+
+        self.pid = PID(P=0.5, I=0.0, D=0.0)
+
         self.constant_speed = cs
         self.left_speed = cs
         self.right_speed = cs
@@ -27,14 +36,16 @@ class Arnold:
         self.obstacle_position = -1 
         self.obstacle_distance = 0
         self.pid_output = 0.00
+
         self.max_speed = maxsp
         self.no_signal = 0xFFFFFFFF
+        self.ultra_data_is_old = False
+
 
     def live(self):
         'Main loop of Arnold. Updates model and perform motions'
         while True:
             try:
-                print('Getting Message')
                 new_data = self.ser.read_message()
 
                 if new_data[0] != None:
@@ -43,15 +54,24 @@ class Arnold:
                 if new_data[1] != None:
                     self.ultra_data = new_data[1]
 
-                print(self.ultra_data)
-                
+                if __debug__:
+                    print('Ultrasonic: ', self.ultra_data)
+                    print('Infrared: ', self.infra_data)
+
+
                 # If the data from the ultrasonics is old then switch modes
                 if self.ultra_data != None and int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
-                    self.acting_mode = self.Mode.OBSTACLE
+                    # self.acting_mode = self.Mode.OBSTACLE
+                    print('Entering Obstacle Avoidance Mode')
                 else:
                     self.acting_mode = self.Mode.FOLLOW
+
                 # Update motion based on current
-                self.actuate()
+                if not (new_data == (None, None)) and :
+                    self.actuate()
+                else if __debug__:
+                    print('No data received')
+
             except KeyboardInterrupt:
                 print('Aborting Robot Operation')
                 break
@@ -65,18 +85,6 @@ class Arnold:
                                                        self.ultra_data.get_right(),
                                                        self.ultra_data.timestamp)
             # turn left, allow for a small mistake
-            '''if(pid_output>0.0001):
-                self.left_speed = pid_output*self.constant_speed
-                self.right_speed = self.constant_speed
-                self.motors.turn(self.duration, self.left_speed, self.right_speed)
-            elif(pid_output<-0.0001):
-                # turn right
-                self.right_speed = -pid_output*self.constant_speed
-                self.left_speed = self.constant_speed
-                self.motors.turn(self.duration, self.left_speed, self.right_speed)
-                # if the error is *almost* corrected
-            else: 
-                self.motors.move_forwards(self.constant_speed, self.constant_speed)#'''
             spd_left = self.constant_speed + self.pid_output/2.0
             spd_right = self.constant_speed - self.pid_output/2.0
             if spd_left > self.max_speed:
@@ -89,7 +97,7 @@ class Arnold:
                 spd_right = -self.max_speed
             self.motors.turn(self.duration, spd_left, spd_right)
             
-        else:
+        elif self.acting_mode == self.Mode.OBSTACLE:
             if self.infra_data.get_infrared_sensor_data(0) != self.no_signal or self.infra_data.get_infrared_sensor_data(4) != self.no_signal:
                 
                 self.obstacle_distance = min(self.infra_data.get_infrared_sensor_data(0), self.infra_data.get_infrared_sensor_data(4))    
@@ -116,6 +124,18 @@ class Arnold:
             # if there is no signal from both sides, turn to avoid the previously recorded corner
             else:
                 self.motors.turn(1000, self.obstacle_position*constant_speed, (1-self.obstacle_position)*constant_speed)  
+
+        elif self.acting_mode == self.Mode.WAIT:
+            if __debug__:
+                print('Wait Mode')
+
+    def update_state(self):
+        if self.ultra_data != None and int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
+            # self.acting_mode = self.Mode.OBSTACLE
+            if __debug__:
+                print('Entering Obstacle Avoidance Mode')
+        else:
+            self.acting_mode = self.Mode.FOLLOW
 
 if __name__ == '__main__':
     arn = Arnold()
