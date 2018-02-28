@@ -23,14 +23,18 @@ class Serial_Comm:
 
         # Message is essentially a list with some checking functions
         msgs = (None, None)
-        while self.ser.inWaiting() > 0:
-            # if __DEBUG__: print(self.ser.inWaiting())
-            msg = ''
-            try:
-                # Receive the message as a string
-                msg = self.ser.readline().strip().decode('ascii')
-                # Convert to integer opcode
+        inBuffer = self.ser.inWaiting()
+        # if __DEBUG__: print(self.ser.inWaiting())
+        msg = ''
+        try:
+            # Read the entire buffer
+            valid_msgs_rec = [line 
+                    # Convert the entire buffer string to list of strings
+                    for line in self.ser.read(inBuffer).strip().decode('ascii').split('\n') 
+                    # Filter the list of string according to regex pattern then take the bottom two
+                    if ultra_pattern.match(line) or infra_pattern.match(line)][:-2]
 
+            for msg in valid_msgs_rec:
                 try:
                     msg = Message(msg)
                 except IOError:
@@ -43,10 +47,10 @@ class Serial_Comm:
                         msgs = (msgs[0], msg)
                 except AttributeError:
                     pass
-                
-            except KeyboardInterrupt:
-                print('Aborting Robot Operation')
-                exit()
+
+        except KeyboardInterrupt:
+            print('Aborting Robot Operation')
+            exit()
         return msgs
 
     def send_to_serial(self, message):
