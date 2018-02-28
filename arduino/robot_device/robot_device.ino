@@ -10,7 +10,7 @@ const uint32_t kReceiverTimeout = 110000;
 int ir_receiver_pins[] = {A1, A2, A3, A4, A5};
 uint32_t ir_data[] = {0, 0, 0, 0, 0};
 
-const uint32_t iID = 0xFFFFFFFB;
+const String iID = "I";
 
 // Ultrasonic Settings
 struct TimeData {
@@ -21,7 +21,7 @@ struct TimeData {
 struct TimeData uTimeData;
 
 // This ID identifies ultrasonic data
-const uint32_t uID = 0xFFFFFFFC;
+const String uID = "U";
 
 // Masks for echo pins
 const uint8_t kLeft = (1 << kLeftEchoPin);
@@ -36,9 +36,9 @@ const String kRadioRequestCode = "$$$";
 // Code for no signal received
 const uint32_t kNoSig = 0xFFFFFFFF;
 // Code identifies beginning of message
-const uint32_t kOpenMsg = 0xFFFFFFFE;
+const String kOpenMsg = "<";
 // Code identifies end of message
-const uint32_t kCloseMsg = 0xFFFFFFFD;
+const String kCloseMsg = ">";
 
 /*
  * Used to activate the receivers
@@ -198,27 +198,23 @@ void listenForIR(){
 }
 
 void sendUltraData() {
-    Serial.println(String(kOpenMsg));
-    Serial.flush();
-    Serial.println(String(uID));
-    Serial.flush();
-    Serial.println(String(uTimeData.leftUD));
-    Serial.flush();
-    Serial.println(String(uTimeData.rightUD));
-    Serial.flush();
-    Serial.println(String(kCloseMsg));
+    Serial.print(kOpenMsg);
+    Serial.print(uID);
+    Serial.print(uTimeData.leftUD);
+    Serial.print(" ");
+    Serial.print(uTimeData.rightUD);
+    Serial.println(kCloseMsg);
     Serial.flush();
 }
 
 void sendIRData(){
-  Serial.println(String(kOpenMsg));
-  Serial.flush();
-  Serial.println(String(iID));
-  Serial.flush();
-  for(int i=0;i<5;i++){
-    Serial.println(ir_data[i]);
-    Serial.flush();
+  Serial.print(kOpenMsg);
+  Serial.print(iID);
+  for(int i = 0; i < 4; ++i){
+    Serial.print(ir_data[i]);
+    Serial.print(" ");
   }
-  Serial.println(String(kCloseMsg));
+  Serial.print(ir_data[4]);
+  Serial.println(kCloseMsg);
   Serial.flush();
 }
