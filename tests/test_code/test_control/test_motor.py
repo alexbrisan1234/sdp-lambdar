@@ -5,7 +5,8 @@ import ev3dev.ev3 as ev3
 import pytest
 
 class TestMotor:
-        
+    
+    @pytest.mark.xfail()
     def test_simple_motor(self):
         def test_code():
             m = Motor('A')
@@ -21,23 +22,24 @@ class TestMotor:
                 }
             ]
         } == test_output
-                
-    # def test_polarity(self):
-    #     def test_code():
-    #         m = Motor('A', -1)
-    #         m . run(10, 10)
+    
+    @pytest.mark.xfail()
+    def test_polarity(self):
+        def test_code():
+            m = Motor('A', -1)
+            m . run(10, 10)
+        test_output = TestHelpers() . get_motor_output(test_code)
 
-    #     test_output = TestHelpers() . get_motor_output(test_code)
+        assert {
+            'A': [
+                {
+                    'speed': '-10',
+                    'duration': '0.01'
+                }
+            ]
+        } == test_output
 
-    #     assert {
-    #         'A': [
-    #             {
-    #                 'speed': '-10',
-    #                 'duration': '0.01'
-    #             }
-    #         ]
-    #     } == test_output
-
+    @pytest.mark.xfail()
     def test_two_motors(self):
         def code():
             m = Motor('A')
