@@ -34,8 +34,11 @@ class Motor:
         speed = wheelCircumference * rps
         return abs(round(speed))
 
+def sign(x):
+    return -1 if x < 0 else 1
+
 class ArnoldMotors:
-    def __init__(self, portDict):
+    def __init__(self, portDict, speed=0, tr=0):
         #front motors are facing opposite the rears
         self . frontLeft = Motor(portDict['frontLeft'], -1)
         self . frontRight = Motor(portDict['frontRight'], -1)
@@ -44,6 +47,8 @@ class ArnoldMotors:
         self . left = [self.frontLeft, self.rearLeft]
         self . right = [self.frontRight, self.rearRight]
         self . motors = self.left + self.right
+        self.speed = speed
+        self.tr = tr
 
     def move(self):
         speeds = self.calculateSpeeds()
@@ -69,7 +74,7 @@ class ArnoldMotors:
         #adjust boundaries: sign * abs adjusted value, rounded if needed
         speedRight = min(abs(speedRight - difference), 1000) * sign(speedRight)
         speedLeft = min(abs(speedLeft - difference), 1000) * sign(speedLeft)
-        if (abs(tr) <= 2000): assert (tr == speedRight - speedLeft)
+        if (abs(self.tr) <= 2000): assert (self.tr == speedRight - speedLeft)
         return (speedLeft, speedRight)
 
     def sign(self, number):
@@ -79,6 +84,15 @@ class ArnoldMotors:
     def set_parameters(self, speed, tr):
         self.speed = speed
         self.tr = tr
+        self.move()
+
+    def set_speed(self, speed):
+        self.speed = speed
+        self.move()
+
+    def set_turning_rate(self, tr):
+        self.tr = tr
+        self.move()
 
     def move_forwards(self, speed):
         self.set_parameters(speed, 0)
