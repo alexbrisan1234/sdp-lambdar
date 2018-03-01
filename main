@@ -6,7 +6,7 @@ from src.code.control.pid import PID
 import time
 
 
-__debug__ = True
+__DEBUG__ = False
 
 class Arnold:
     # Arnold's to main sensory inputs
@@ -52,24 +52,26 @@ class Arnold:
                     self.ultra_data = new_data[0]
 
                 if new_data[1] != None:
-                    self.ultra_data = new_data[1]
+                    self.infra_data = new_data[1]
 
-                if __debug__:
-                    print('Ultrasonic: ', self.ultra_data)
-                    print('Infrared: ', self.infra_data)
+                if __DEBUG__ :
+                    if self.ultra_data != None: print('Ultrasonic: ', self.ultra_data)
+                    if self.infra_data != None: print('Infrared: ', self.infra_data)
+
 
 
                 # If the data from the ultrasonics is old then switch modes
                 if self.ultra_data != None and int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
-                    # self.acting_mode = self.Mode.OBSTACLE
-                    print('Entering Obstacle Avoidance Mode')
+                    self.acting_mode = self.Mode.OBSTACLE
+                    if __DEBUG__: print('Entering Obstacle Avoidance Mode')
                 else:
                     self.acting_mode = self.Mode.FOLLOW
 
                 # Update motion based on current
-                if not (new_data == (None, None)) and :
+
+                if self.ultra_data != None and self.infra_data != None:
                     self.actuate()
-                else if __debug__:
+                elif __DEBUG__:
                     print('No data received')
 
             except KeyboardInterrupt:
@@ -126,13 +128,13 @@ class Arnold:
                 self.motors.turn(1000, self.obstacle_position*constant_speed, (1-self.obstacle_position)*constant_speed)  
 
         elif self.acting_mode == self.Mode.WAIT:
-            if __debug__:
+            if __DEBUG__:
                 print('Wait Mode')
 
     def update_state(self):
         if self.ultra_data != None and int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
             # self.acting_mode = self.Mode.OBSTACLE
-            if __debug__:
+            if __DEBUG__:
                 print('Entering Obstacle Avoidance Mode')
         else:
             self.acting_mode = self.Mode.FOLLOW
