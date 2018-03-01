@@ -18,7 +18,7 @@ class Arnold:
         OBSTACLE = 2    # Activates on signal loss or path blockage. Robot switches to wall following
         WAIT = 3        # Halt actuation and wait for a usable
 
-    def __init__(self, cs=200, dur=5000, maxsp = 1000):
+    def __init__(self, cs=400, dur=5000, maxsp = 1000):
         self.motors = ArnoldMotors({'frontLeft':'A','frontRight':'B','rearLeft':'C','rearRight':'D'});
         self.acting_mode = self.Mode.FOLLOW
         # Catch error for incorrect serial port
@@ -27,7 +27,8 @@ class Arnold:
         except FileNotFoundError: 
             self.ser = Serial_Comm(oport="/dev/ttyACM1")
 
-        self.pid = PID(P=0.5, I=0.0, D=0.0)
+        self.pid_tracking = PID(P=2.0, I=0.0, D=0.0)
+        self.pid_avoidance = PID(P=0.5, I=0.0, D=0.0)
 
         self.constant_speed = cs
         self.left_speed = cs
