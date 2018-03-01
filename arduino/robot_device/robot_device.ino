@@ -202,33 +202,33 @@ void listenForIR(){
   
   int distances[5][10];
  
-  for (int row = 0 ; row < 10 ; ++row)
+  for (int row = 0 ; row < 5 ; ++row)
   {
-    for (int col = 0 ; col < 5 ; ++col)
+    for (int col = 0 ; col < 10 ; ++col)
     {
-      distances[row][col] = convertVoltageToDistance(analogRead(ir_receiver_pins[i]));
+      distances[row][col] = convertVoltageToDistance(analogRead(ir_receiver_pins[row]));
     }
   }
   
   float means[] = {0.0, 0.0, 0.0, 0.0, 0.0};
   float variances[] = {0.0, 0.0, 0.0, 0.0, 0.0};
 
-  float epsilon = 1.0;
+  float epsilon = 20;
 
-  for (int row = 0 ; row < 10 ; ++row)
+  for (int row = 0 ; row < 5 ; ++row)
   {
     for (int col = 0 ; col < 10 ; ++col)
     {
-      means[col] += distances[row][col] / 10.0;
+      means[row] += distances[row][col] / 10.0;
     }
   }
 
-  for (int row = 0 ; row < 10 ; ++row)
+  for (int row = 0 ; row < 5; ++row)
   {
     for (int col = 0 ; col < 10 ; ++col)
     {
 
-      variances[col] += (distances[row][col] - means[col]) *  (distances[row][col] - means[col]) / 10.0; 
+      variances[row] += (distances[row][col] - means[row]) *  (distances[row][col] - means[row]) / 10.0; 
     }
   }
 
