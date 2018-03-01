@@ -76,7 +76,6 @@ class Arnold:
                     self.actuate()
                 elif __DEBUG__:
                     print('No data received')
-                time.sleep(1)
 
             except KeyboardInterrupt:
                 self.motors.stop()
