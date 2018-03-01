@@ -11,9 +11,10 @@ infra_pattern = re.compile('^<I[0-9]{1,10}( [0-9]{1,10}){4}>$')
 class Serial_Comm:
     def __init__(self, oport="/dev/ttyACM0", obaudrate=9600, otimeout=None):
         self.ser = serial.Serial(port=oport, baudrate=obaudrate, timeout=otimeout)
+        self.ser.read(self.ser.inWaiting())
 
         # Set the signal codes, identify the beginning and end of a signal
-        self.no_sig = 4294967295
+        self.no_sig = 0xFFFFFFFF
 
         self.partial_msg = ''
 
@@ -34,7 +35,7 @@ class Serial_Comm:
             lines = buf.split('|')
             if __DEBUG__: print(lines)  # VERY useful
             if ultra_pattern.match(lines[-1]) or infra_pattern.match(lines[-1]):
-                self.partial_msg = ""
+                self.partial_msg = ''
             else:
                 self.partial_msg = lines[-1]
 

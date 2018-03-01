@@ -54,7 +54,7 @@ void requestSignal();
  * `startTime` it took in the `timeLeft` and `timeRight` pointers. If no signal
  * is received, the respective output is set to 0xFFFFFFFF (2^32 - 1).
  */
-void measureTimes(uint32_t startTime, uint32_t* timeLeft, uint32_t* timeRight);
+void measureTimes(uint32_t startTime);
 /*
  * Uses port manipulation to read all echo pins (specified by the `mask`)
  * extremely fast (~0.1 us).
@@ -115,7 +115,7 @@ void loop()
 
   // Now we have about 20 ms to do stuff
 
-  measureTimes(t0, &(uTimeData.leftUD), &(uTimeData.rightUD));
+  measureTimes(t0);
 
   // Now we have uTimeData.leftUD and uTimeData.rightUD. We can send them to EV3 or store them
   // in global variables and send in the next iteration. We can also do other
@@ -139,7 +139,7 @@ void requestSignal() {
 }
 
 // Ultrasonic Functions
-void measureTimes(uint32_t startTime, uint32_t* timeLeft, uint32_t* timeRight)
+void measureTimes(uint32_t startTime)
 {
   uint8_t echo = getEcho(kBoth);
   // Both echo pins should still be high
@@ -148,12 +148,12 @@ void measureTimes(uint32_t startTime, uint32_t* timeLeft, uint32_t* timeRight)
     Serial.print(kLineSep);
   }
 
-  *timeLeft = 0xFFFFFFFF;   // Max number
-  *timeRight = 0xFFFFFFFF;  // Max number
+  uTimeData.timeLeft = 0xFFFFFFFF;   // Max number
+  uTimeData.timeRight = 0xFFFFFFFF;  // Max number
   // Wait for echo pins to go low and note times
   while (echo != 0x00) {
     echo = getEcho(kBoth);
-    if ((*timeLeft == 0xFFFFFFFF) && ((echo & kLeft) == 0))
+    if ((uTimeData.timeLeft == 0xFFFFFFFF) && ((echo & kLeft) == 0))
       *timeLeft = micros() - startTime;
     if ((*timeRight == 0xFFFFFFFF) && ((echo & kRight) == 0))
       *timeRight = micros() - startTime;
