@@ -129,7 +129,7 @@ void loop()
   delay(1);
   digitalWrite(8,HIGH);
   
-  delay(100);  // TODO: should probably be removed or reduced
+  delay(80);  // TODO: should probably be removed or reduced
 }
 
 void requestSignal() {
@@ -199,8 +199,49 @@ uint32_t convertVoltageToDistance(int voltage){
 }
 
 void listenForIR(){
+  
+  int distances[5][10];
+ 
+  for (int row = 0 ; row < 10 ; ++row)
+  {
+    for (int col = 0 ; col < 5 ; ++col)
+    {
+      distances[row][col] = convertVoltageToDistance(analogRead(ir_receiver_pins[i]));
+    }
+  }
+  
+  float means[] = {0.0, 0.0, 0.0, 0.0, 0.0};
+  float variances[] = {0.0, 0.0, 0.0, 0.0, 0.0};
+
+  float epsilon = 1.0;
+
+  for (int row = 0 ; row < 10 ; ++row)
+  {
+    for (int col = 0 ; col < 10 ; ++col)
+    {
+      means[col] += distances[row][col] / 10.0;
+    }
+  }
+
+  for (int row = 0 ; row < 10 ; ++row)
+  {
+    for (int col = 0 ; col < 10 ; ++col)
+    {
+
+      variances[col] += (distances[row][col] - means[col]) *  (distances[row][col] - means[col]) / 10.0; 
+    }
+  }
+
+ 
   for(int i=0;i<5;i++){
-    ir_data[i] = convertVoltageToDistance(analogRead(ir_receiver_pins[i]));
+    if (variances[i] > epsilon)
+    {
+      ir_data[i] = (1 << 32);
+    }
+    else
+    {
+      ir_data[i] = (uint32_t) means[i];
+    }
   }
 }
 
