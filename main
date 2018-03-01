@@ -18,10 +18,9 @@ class Arnold:
         OBSTACLE = 2    # Activates on signal loss or path blockage. Robot switches to wall following
         WAIT = 3        # Halt actuation and wait for a usable
 
-    def __init__(self, cs=200, dur=5000):
+    def __init__(self, cs=200, dur=5000, maxsp = 1000):
         self.motors = ArnoldMotors({'frontLeft':'A','frontRight':'B','rearLeft':'C','rearRight':'D'});
         self.acting_mode = self.Mode.FOLLOW
-
         # Catch error for incorrect serial port
         try:
             self.ser = Serial_Comm(oport="/dev/ttyACM0")
@@ -29,14 +28,19 @@ class Arnold:
             self.ser = Serial_Comm(oport="/dev/ttyACM1")
 
         self.pid = PID(P=0.5, I=0.0, D=0.0)
+
         self.constant_speed = cs
         self.left_speed = cs
         self.right_speed = cs
         self.duration = dur
-        self.obstacle_position = 0 # 0 for left, 1 for right
+        self.obstacle_position = -1 
         self.obstacle_distance = 0
         self.pid_output = 0.00
+
+        self.max_speed = maxsp
+        self.no_signal = 0xFFFFFFFF
         self.ultra_data_is_old = False
+
 
     def live(self):
         'Main loop of Arnold. Updates model and perform motions'
@@ -77,39 +81,51 @@ class Arnold:
         'Logic for selecting an actuation strategy and activating motors'
         if self.acting_mode == self.Mode.FOLLOW:
             # get the pid output to tune the speed and direction
-            self.pid_output = self.pid.update_tracking(self.ultra_data.get_left(),
+            self.pid_output = self.pid_tracking.update_tracking(self.ultra_data.get_left(),
                                                        self.ultra_data.get_right(),
                                                        self.ultra_data.timestamp)
             # turn left, allow for a small mistake
             spd_left = self.constant_speed + self.pid_output/2.0
             spd_right = self.constant_speed - self.pid_output/2.0
-            if spd_left > 1000:
-                spd_left = 1000
-            if spd_left < -1000:
-                spd_left = -1000
-            if spd_right > 1000:
-                spd_right = 1000
-            if spd_right < -1000:
-                spd_right = -1000
+            if spd_left > self.max_speed:
+                spd_left = self.max_speed
+            if spd_left < -self.max_speed:
+                spd_left = -self.max_speed
+            if spd_right > self.max_speed:
+                spd_right = self.max_speed
+            if spd_right < -self.max_speed:
+                spd_right = -self.max_speed
             self.motors.turn(self.duration, spd_left, spd_right)
             
         elif self.acting_mode == self.Mode.OBSTACLE:
-            # check which side of the wall you're at, assume the robot is moving straight
-            if(self.infra_data[2]!=0): # right sensor from arnold's perspective
-                self.obstacle_position = 1
-                self.obstacle_distance = self.infra_data[2]
-                self.motors.move_forwards(self.constant_speed, self.constant_speed) 
-            elif(self.infra_data[6]!=0): 
-                self.obstacle_position = 0    
-                self.obstacle_distance = self.infra_data[6]
-                self.motors.move_forwards(self.constant_speed, self.constant_speed)
-            # if readings from both sides are 0 and obstacle was on the left side   
-            elif(self.obstacle_position == 0): 
-                self.motors.turn(self.duration, constant_speed/2, constant_speed)
-            else:
-                self.motors.turn(self.duration, constant_speed, constant_speed/2)    
+            if self.infra_data.get_infrared_sensor_data(0) != self.no_signal or self.infra_data.get_infrared_sensor_data(4) != self.no_signal:
+                
+                self.obstacle_distance = min(self.infra_data.get_infrared_sensor_data(0), self.infra_data.get_infrared_sensor_data(4))    
+            
+                if self.obstacle_distance == self.infra_data.get_infrared_sensor_data(0):
+                    self.obstacle_position = 1
+                else:
+                    self.obstacle_position = 0    
 
-        if self.acting_mode == self.Mode.WAIT:
+                self.pid_output = self.pid_avoidance.update_collision_avoidance(self.obstacle_distance, self.infra_data.timestamp)
+
+                spd_left = self.constant_speed + self.pid_output/2.0
+                spd_right = self.constant_speed - self.pid_output/2.0
+                if spd_left > self.max_speed:
+                    spd_left = self.max_speed
+                if spd_left < -self.max_speed:
+                    spd_left = -self.max_speed
+                if spd_right > self.max_speed:
+                    spd_right = self.max_speed
+                if spd_right < -self.max_speed:
+                    spd_right = -self.max_speed
+                self.motors.turn(self.duration, spd_left, spd_right)
+
+            # if there is no signal from both sides, turn to avoid the previously recorded corner
+            else:
+                self.motors.turn(1000, self.obstacle_position*constant_speed, (1-self.obstacle_position)*constant_speed)  
+
+        elif self.acting_mode == self.Mode.WAIT:
             if __debug__:
                 print('Wait Mode')
 
