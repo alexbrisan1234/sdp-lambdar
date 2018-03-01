@@ -39,6 +39,7 @@ const uint32_t kNoSig = 0xFFFFFFFF;
 const String kOpenMsg = "<";
 // Code identifies end of message
 const String kCloseMsg = ">";
+const String kLineSep = "|";
 
 /*
  * Used to activate the receivers
@@ -106,8 +107,10 @@ void loop()
   delayMicroseconds(600);
   uint32_t t0 = micros();
   // Both echo pins should be high now
-  if (getEcho(kBoth) != kBoth)
-    Serial.println("ERROR: Unexpected echo state");
+  if (getEcho(kBoth) != kBoth) {
+    Serial.print("ERROR: Unexpected echo state");
+    Serial.print(kLineSep);
+  }
   requestSignal();
 
   // Now we have about 20 ms to do stuff
@@ -130,7 +133,8 @@ void loop()
 }
 
 void requestSignal() {
-  Serial.println(kRadioRequestCode);
+  Serial.print(kRadioRequestCode);
+  Serial.print(kLineSep);
   Serial.flush();
 }
 
@@ -139,8 +143,10 @@ void measureTimes(uint32_t startTime, uint32_t* timeLeft, uint32_t* timeRight)
 {
   uint8_t echo = getEcho(kBoth);
   // Both echo pins should still be high
-  if (echo != kBoth)
-    Serial.println("ERROR: Listening too late");
+  if (echo != kBoth) {
+    Serial.print("ERROR: Listening too late");
+    Serial.print(kLineSep);
+  }
 
   *timeLeft = 0xFFFFFFFF;   // Max number
   *timeRight = 0xFFFFFFFF;  // Max number
@@ -159,13 +165,15 @@ void measureTimes(uint32_t startTime, uint32_t* timeLeft, uint32_t* timeRight)
 
   // Check radio delay
   if (*timeLeft < kRadioDelay) {
-    Serial.println("ERROR: Radio delay too high. timeLeft=");
-    Serial.println(*timeLeft);
+    Serial.print("ERROR: Radio delay too high. timeLeft=");
+    Serial.print(*timeLeft);
+    Serial.print(kLineSep);
     *timeLeft = 0xFFFFFFFF;
   }
   if (*timeRight < kRadioDelay) {
-    Serial.println("ERROR: Radio delay too high. timeRight=");
-    Serial.println(*timeRight);
+    Serial.print("ERROR: Radio delay too high. timeRight=");
+    Serial.print(*timeRight);
+    Serial.print(kLineSep);
     *timeRight = 0xFFFFFFFF;
   }
 
@@ -187,8 +195,7 @@ void activateUltrasonic(int trigPin)
 
 /* IR Functions */
 uint32_t convertVoltageToDistance(int voltage){
-  if (voltage == 0) return kNoSig;
-  return (uint32_t)(63438.5*pow(voltage, -1.15)+0.5);
+  return (voltage != 0) ? (uint32_t)(63438.5*pow(voltage, -1.15)+0.5) : kNoSig;
 }
 
 void listenForIR(){
@@ -198,13 +205,14 @@ void listenForIR(){
 }
 
 void sendUltraData() {
-    Serial.print(kOpenMsg);
-    Serial.print(uID);
-    Serial.print(uTimeData.leftUD);
-    Serial.print(" ");
-    Serial.print(uTimeData.rightUD);
-    Serial.println(kCloseMsg);
-    Serial.flush();
+  Serial.print(kOpenMsg);
+  Serial.print(uID);
+  Serial.print(uTimeData.leftUD);
+  Serial.print(" ");
+  Serial.print(uTimeData.rightUD);
+  Serial.print(kCloseMsg);
+  Serial.print(kLineSep);
+  Serial.flush();
 }
 
 void sendIRData(){
@@ -215,6 +223,7 @@ void sendIRData(){
     Serial.print(" ");
   }
   Serial.print(ir_data[4]);
-  Serial.println(kCloseMsg);
+  Serial.print(kCloseMsg);
+  Serial.print(kLineSep);
   Serial.flush();
 }
