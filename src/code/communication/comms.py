@@ -5,8 +5,8 @@ import re
 
 __DEBUG__ = False
 
-ultra_pattern = re.compile('\<U[0-9]{0,10} [0-9]{0,10}\>')
-infra_pattern = re.compile('\<I[0-9]{0,10}( [0-9]{0,10}){4}\>')
+ultra_pattern = re.compile('^<U[0-9]{1,10} [0-9]{1,10}>$')
+infra_pattern = re.compile('^<I[0-9]{1,10}( [0-9]{1,10}){4}>$')
 
 class Serial_Comm:
     def __init__(self, oport="/dev/ttyACM0", obaudrate=9600, otimeout=None):
@@ -14,6 +14,8 @@ class Serial_Comm:
 
         # Set the signal codes, identify the beginning and end of a signal
         self.no_sig = 4294967295
+
+        self.partial_msg = ''
 
     def read_message(self):
         '''
@@ -24,15 +26,21 @@ class Serial_Comm:
         # Message is essentially a list with some checking functions
         msgs = (None, None)
         inBuffer = self.ser.inWaiting()
-        # if __DEBUG__: print(self.ser.inWaiting())
+        if __DEBUG__: print(self.ser.inWaiting())
         msg = ''
         try:
-            # Read the entire buffer
-            valid_msgs_rec = [line 
-                    # Convert the entire buffer string to list of strings
-                    for line in self.ser.read(inBuffer).strip().decode('ascii').split('\n') 
-                    # Filter the list of string according to regex pattern then take the bottom two
-                    if ultra_pattern.match(line) or infra_pattern.match(line)][:-2]
+            # Read the entire buffer string and convert to list of strings
+            buf = self.partial_msg + self.ser.read(inBuffer).decode()
+            lines = buf.split('|')
+            if __DEBUG__: print(lines)  # VERY useful
+            if ultra_pattern.match(lines[-1]) or infra_pattern.match(lines[-1]):
+                self.partial_msg = ""
+            else:
+                self.partial_msg = lines[-1]
+
+            # Filter the lines according to regex pattern then take the bottom two
+            valid_msgs_rec = [line for line in lines
+                    if ultra_pattern.match(line) or infra_pattern.match(line)][-2:]
 
             for msg in valid_msgs_rec:
                 try:
@@ -74,23 +82,22 @@ class Message(list):
     timestamp = 0
 
     def __init__(self, msg):
+        #STM Filtering data more
+        values = [int(d) for d in msg[2:-1].split(' ')]
+        self.timestamp = int(round(time.time() * 1000))
+
         if ultra_pattern.match(msg):
             self.msg_type = 'ultrasonic'
             if __DEBUG__: print('Ultra message received: ', msg)
+            if self.no_sig in values:
+                raise IOError('Signal not received on one/both ultrasonic sensors')
         elif infra_pattern.match(msg):
             if __DEBUG__: print('Infra message received: ', msg)
             self.msg_type = 'infrared'
         else: 
             raise IOError('Message was not well formed')
 
-
-        #STM Filtering data more
-        msg = [int(d) for d in msg[2:-1].split(' ')]
-        if self.no_sig in msg:
-            raise IOError('Signal not received on one/both sensor')
-        self.timestamp = int(round(time.time() * 1000))
-
-        for d in msg:
+        for d in values:
             self.append(d)
 
 
@@ -116,7 +123,7 @@ if __name__ == '__main__':
     ard = Serial_Comm()
 
     while True:
-        msgs = ard.read_from_serial()
+        msgs = ard.read_message()
         print('Ultrasonic: ', msg[0])
         print('Infrared: ', msg[1])
 
