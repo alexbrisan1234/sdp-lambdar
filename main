@@ -6,7 +6,7 @@ from src.code.control.pid import PID
 import time
 
 
-__DEBUG__ = True
+__DEBUG__ = False
 
 class Arnold:
     # Arnold's to main sensory inputs
@@ -97,19 +97,19 @@ class Arnold:
             
         elif self.acting_mode == self.Mode.OBSTACLE:
             # check which side of the wall you're at, assume the robot is moving straight
-            if(self.infra_data[2]!=0): # right sensor from arnold's perspective
+            if(self.infra_data[0]!=0): # right sensor from arnold's perspective
                 self.obstacle_position = 1
                 self.obstacle_distance = self.infra_data[2]
                 self.motors.move_forwards(self.constant_speed, self.constant_speed) 
-            elif(self.infra_data[6]!=0): 
+            elif(self.infra_data[4]!=0): 
                 self.obstacle_position = 0    
                 self.obstacle_distance = self.infra_data[6]
                 self.motors.move_forwards(self.constant_speed, self.constant_speed)
             # if readings from both sides are 0 and obstacle was on the left side   
             elif(self.obstacle_position == 0): 
-                self.motors.turn(self.duration, constant_speed/2, constant_speed)
+                self.motors.turn(self.duration, self.constant_speed/2, self.constant_speed)
             else:
-                self.motors.turn(self.duration, constant_speed, constant_speed/2)    
+                self.motors.turn(self.duration, self.constant_speed, self.constant_speed/2)    
 
         if self.acting_mode == self.Mode.WAIT:
 
