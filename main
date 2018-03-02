@@ -41,7 +41,7 @@ class Arnold:
         self.max_speed = maxsp
         self.no_signal = 0xFFFFFFFF
         self.ultra_data_is_old = False
-        self.threshold = 20
+        self.threshold = 30
 
         self.left_side_distance = self.no_signal
         self.right_side_distance = self.no_signal
@@ -88,7 +88,7 @@ class Arnold:
     def isInRange(self, dist1, dist2):
         return abs(dist1-dist2)<self.threshold
 
-    # right - 1, 0 , left -  2, 4
+    # right - 2, 0 , left -  3, 4
     def actuate(self):
         'Logic for selecting an actuation strategy and activating motors'
         if self.acting_mode == self.Mode.FOLLOW:
@@ -100,16 +100,16 @@ class Arnold:
 
 
         elif self.acting_mode == self.Mode.OBSTACLE:
-            print("ir", self.infra_data)
-            if(self.isInRange(self.infra_data.get_infrared_sensor_data(0), self.infra_data.get_infrared_sensor_data(1))):
-                self.right_side_distance =  abs(self.infra_data.get_infrared_sensor_data(0) - self.infra_data.get_infrared_sensor_data(1))
+            print("start ir", self.infra_data)
+            if(self.isInRange(self.infra_data.get_infrared_sensor_data(0), self.infra_data.get_infrared_sensor_data(2))):
+                self.right_side_distance =  abs(self.infra_data.get_infrared_sensor_data(0) - self.infra_data.get_infrared_sensor_data(2))
                 print("right side in range")
             else:
                 self.right_side_distance = self.no_signal
                 print("right side not in range")
 
-            if(self.isInRange(self.infra_data.get_infrared_sensor_data(2), self.infra_data.get_infrared_sensor_data(4))):
-                self.left_side_distance =  abs(self.infra_data.get_infrared_sensor_data(2) - self.infra_data.get_infrared_sensor_data(4))
+            if(self.isInRange(self.infra_data.get_infrared_sensor_data(3), self.infra_data.get_infrared_sensor_data(4))):
+                self.left_side_distance =  abs(self.infra_data.get_infrared_sensor_data(3) - self.infra_data.get_infrared_sensor_data(4))
                 print("left side in range")
             else:
                 self.left_side_distance = self.no_signal
@@ -117,7 +117,12 @@ class Arnold:
 
             if self.right_side_distance!=self.no_signal or self.left_side_distance!=self.no_signal:
 
-                self.obstacle_distance = min(self.infra_data.get_infrared_sensor_data(0), self.infra_data.get_infrared_sensor_data(4))
+                if(self.right_side_distance!=self.no_signal and self.left_side_distance!=self.no_signal):
+                    self.obstacle_distance = min(self.infra_data.get_infrared_sensor_data(3), self.infra_data.get_infrared_sensor_data(4))
+                elif(self.right_side_distance!=self.no_signal):
+                    self.obstacle_distance = self.infra_data.get_infrared_sensor_data(0)
+                else:
+                    self.infra_data.get_infrared_sensor_data(4)
 
                 print(self.obstacle_distance, "obstacle distance")
                 if self.obstacle_distance == self.infra_data.get_infrared_sensor_data(0):
@@ -128,7 +133,8 @@ class Arnold:
                     print("obstacle on the left")
                 self.pid_output = self.pid_avoidance.update_collision_avoidance(self.obstacle_distance, self.infra_data.timestamp)
 
-                self.motors.set_turning_rate(-self.pid_output)
+                #self.motors.set_turning_rate(-self.pid_output)
+                self.motors.set_turning_rate(0)
             # if there is no signal from both sides, turn to avoid the previously recorded corner
             else:
                 print("turning!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -137,7 +143,7 @@ class Arnold:
                 else:
                     sign = 1
                 self.motors.set_turning_rate(self.constant_speed*sign)
-
+            print("ir", self.infra_data)
         elif self.acting_mode == self.Mode.WAIT:
             if __DEBUG__:
                 print('Wait Mode')
