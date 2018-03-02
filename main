@@ -4,9 +4,10 @@ from enum import Enum
 from src.code.control.motor import *
 from src.code.control.pid import PID
 import time
+import os
 
 
-__DEBUG__ = False
+__DEBUG__ = True
 
 class Arnold:
     # Arnold's to main sensory inputs
@@ -22,10 +23,10 @@ class Arnold:
         self.motors = ArnoldMotors({'frontLeft':'A','frontRight':'B','rearLeft':'C','rearRight':'D'}, cs);
         self.acting_mode = self.Mode.FOLLOW
         # Catch error for incorrect serial port
-        try:
-            self.ser = Serial_Comm(oport="/dev/ttyACM0")
-        except FileNotFoundError: 
-            self.ser = Serial_Comm(oport="/dev/ttyACM1")
+
+        ports = os.listdir('/dev/')
+        port = [p for p in ports if 'ACM' in p][0]
+        self.ser = Serial_Comm(oport='/dev/'+port)
 
         self.pid_tracking = PID(P=2.0, I=0.0, D=0.0)
         self.pid_avoidance = PID(P=0.5, I=0.0, D=0.0)
@@ -47,7 +48,9 @@ class Arnold:
         'Main loop of Arnold. Updates model and perform motions'
         while True:
             try:
+                if __DEBUG__:print('Started Read')
                 new_data = self.ser.read_message()
+                if __DEBUG__:print('Finished')
 
                 if new_data[0] != None:
                     self.ultra_data = new_data[0]
@@ -58,7 +61,6 @@ class Arnold:
                 if __DEBUG__ :
                     if self.ultra_data != None: print('Ultrasonic: ', self.ultra_data)
                     if self.infra_data != None: print('Infrared: ', self.infra_data)
-
 
 
                 # If the data from the ultrasonics is old then switch modes
@@ -99,6 +101,10 @@ class Arnold:
                     self.obstacle_position = 1
                 else:
                     self.obstacle_position = 0    
+                
+                if __DEBUG__:
+                    print("Obstacle position is : {}".format(self.obstacle_position))
+                    print("Obstacle distance is : {}".format(self.obstacle_distance))
 
                 self.pid_output = self.pid_avoidance.update_collision_avoidance(self.obstacle_distance, self.infra_data.timestamp)
 
