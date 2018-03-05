@@ -74,7 +74,7 @@ class ArnoldMotors:
         #adjust boundaries: sign * abs adjusted value, rounded if needed
         speedRight = min(abs(speedRight - difference), 1000) * sign(speedRight)
         speedLeft = min(abs(speedLeft - difference), 1000) * sign(speedLeft)
-        if (abs(self.tr) <= 2000): assert (self.tr == speedRight - speedLeft)
+        #if (abs(self.tr) <= 2000): assert (self.tr == round(speedRight - speedLeft))
         return (speedLeft, speedRight)
 
     def sign(self, number):
