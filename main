@@ -90,7 +90,6 @@ class Arnold:
             self.pid_output = self.pid_tracking.update_tracking(self.ultra_data.get_left(),
                                                        self.ultra_data.get_right(),
                                                        self.ultra_data.timestamp)
-            #self.motors.set_turning_rate(-self.pid_output)
 
             dist = (self.ultra_data.get_left() + self.ultra_data.get_right()) / 2
             spd = 0
@@ -102,7 +101,7 @@ class Arnold:
                 spd = self.constant_speed * (dist - 22500) / 2500
             self.motors.set_parameters(spd, -self.pid_output)
 
-            
+
         elif self.acting_mode == self.Mode.OBSTACLE:
             if self.infra_data.get_infrared_sensor_data(0) != self.no_signal or self.infra_data.get_infrared_sensor_data(4) != self.no_signal:
                 
@@ -120,17 +119,6 @@ class Arnold:
                 self.pid_output = self.pid_avoidance.update_collision_avoidance(self.obstacle_distance, self.infra_data.timestamp)
 
                 self.motors.set_turning_rate(self.pid_output)
-                """spd_left = self.constant_speed + self.pid_output/2.0
-                spd_right = self.constant_speed - self.pid_output/2.0
-                if spd_left > self.max_speed:
-                    spd_left = self.max_speed
-                if spd_left < -self.max_speed:
-                    spd_left = -self.max_speed
-                if spd_right > self.max_speed:
-                    spd_right = self.max_speed
-                if spd_right < -self.max_speed:
-                    spd_right = -self.max_speed
-                self.motors.turn(self.duration, spd_left, spd_right)"""
 
             # if there is no signal from both sides, turn to avoid the previously recorded corner
             else:

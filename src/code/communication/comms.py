@@ -2,6 +2,7 @@
 import serial
 import time
 import re
+from .leds import *
 
 __DEBUG__ = False
 
@@ -91,7 +92,14 @@ class Message(list):
             self.msg_type = 'ultrasonic'
             if __DEBUG__: print('Ultra message received: ', msg)
             if self.no_sig in values:
+                if (values[0]==self.no_sig):
+                    light_left(0)
+                if (values[1]==self.no_sig):
+                    light_right(0)
                 raise IOError('Signal not received on one/both ultrasonic sensors')
+            else:
+                light_left(1)
+                light_right(1)
         elif infra_pattern.match(msg):
             if __DEBUG__: print('Infra message received: ', msg)
             self.msg_type = 'infrared'
