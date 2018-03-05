@@ -24,9 +24,8 @@ class Arnold:
         self.acting_mode = self.Mode.FOLLOW
         # Catch error for incorrect serial port
 
-        ports = os.listdir('/dev/')
-        port = [p for p in ports if 'ACM' in p][0]
-        self.ser = Serial_Comm(oport='/dev/'+port)
+
+        self.ser = Serial_Comm()
 
         self.pid_tracking = PID(P=2.0, I=0.0, D=0.0)
         self.pid_avoidance = PID(P=0.5, I=0.0, D=0.0)
