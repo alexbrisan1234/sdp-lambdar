@@ -2,6 +2,7 @@
 import serial
 import time
 import re
+from .leds import *
 
 __DEBUG__ = False
 
@@ -11,9 +12,10 @@ infra_pattern = re.compile('^<I[0-9]{1,10}( [0-9]{1,10}){4}>$')
 class Serial_Comm:
     def __init__(self, oport="/dev/ttyACM0", obaudrate=9600, otimeout=None):
         self.ser = serial.Serial(port=oport, baudrate=obaudrate, timeout=otimeout)
+        self.ser.read(self.ser.inWaiting())
 
         # Set the signal codes, identify the beginning and end of a signal
-        self.no_sig = 4294967295
+        self.no_sig = 0xFFFFFFFF
 
         self.partial_msg = ''
 
@@ -34,7 +36,7 @@ class Serial_Comm:
             lines = buf.split('|')
             if __DEBUG__: print(lines)  # VERY useful
             if ultra_pattern.match(lines[-1]) or infra_pattern.match(lines[-1]):
-                self.partial_msg = ""
+                self.partial_msg = ''
             else:
                 self.partial_msg = lines[-1]
 
@@ -90,7 +92,14 @@ class Message(list):
             self.msg_type = 'ultrasonic'
             if __DEBUG__: print('Ultra message received: ', msg)
             if self.no_sig in values:
+                if (values[0]==self.no_sig):
+                    light_left(0)
+                if (values[1]==self.no_sig):
+                    light_right(0)
                 raise IOError('Signal not received on one/both ultrasonic sensors')
+            else:
+                light_left(1)
+                light_right(1)
         elif infra_pattern.match(msg):
             if __DEBUG__: print('Infra message received: ', msg)
             self.msg_type = 'infrared'

@@ -54,7 +54,7 @@ void requestSignal();
  * `startTime` it took in the `timeLeft` and `timeRight` pointers. If no signal
  * is received, the respective output is set to 0xFFFFFFFF (2^32 - 1).
  */
-void measureTimes(uint32_t startTime, uint32_t* timeLeft, uint32_t* timeRight);
+void measureTimes(uint32_t startTime);
 /*
  * Uses port manipulation to read all echo pins (specified by the `mask`)
  * extremely fast (~0.1 us).
@@ -115,7 +115,7 @@ void loop()
 
   // Now we have about 20 ms to do stuff
 
-  measureTimes(t0, &(uTimeData.leftUD), &(uTimeData.rightUD));
+  measureTimes(t0);
 
   // Now we have uTimeData.leftUD and uTimeData.rightUD. We can send them to EV3 or store them
   // in global variables and send in the next iteration. We can also do other
@@ -129,7 +129,7 @@ void loop()
   delay(1);
   digitalWrite(8,HIGH);
   
-  delay(100);  // TODO: should probably be removed or reduced
+  delay(80);  // TODO: should probably be removed or reduced
 }
 
 void requestSignal() {
@@ -139,7 +139,7 @@ void requestSignal() {
 }
 
 // Ultrasonic Functions
-void measureTimes(uint32_t startTime, uint32_t* timeLeft, uint32_t* timeRight)
+void measureTimes(uint32_t startTime)
 {
   uint8_t echo = getEcho(kBoth);
   // Both echo pins should still be high
@@ -148,12 +148,12 @@ void measureTimes(uint32_t startTime, uint32_t* timeLeft, uint32_t* timeRight)
     Serial.print(kLineSep);
   }
 
-  *timeLeft = 0xFFFFFFFF;   // Max number
-  *timeRight = 0xFFFFFFFF;  // Max number
+  uTimeData.timeLeft = 0xFFFFFFFF;   // Max number
+  uTimeData.timeRight = 0xFFFFFFFF;  // Max number
   // Wait for echo pins to go low and note times
   while (echo != 0x00) {
     echo = getEcho(kBoth);
-    if ((*timeLeft == 0xFFFFFFFF) && ((echo & kLeft) == 0))
+    if ((uTimeData.timeLeft == 0xFFFFFFFF) && ((echo & kLeft) == 0))
       *timeLeft = micros() - startTime;
     if ((*timeRight == 0xFFFFFFFF) && ((echo & kRight) == 0))
       *timeRight = micros() - startTime;
@@ -199,8 +199,49 @@ uint32_t convertVoltageToDistance(int voltage){
 }
 
 void listenForIR(){
+  
+  int distances[5][10];
+ 
+  for (int row = 0 ; row < 10 ; ++row)
+  {
+    for (int col = 0 ; col < 5 ; ++col)
+    {
+      distances[row][col] = convertVoltageToDistance(analogRead(ir_receiver_pins[i]));
+    }
+  }
+  
+  float means[] = {0.0, 0.0, 0.0, 0.0, 0.0};
+  float variances[] = {0.0, 0.0, 0.0, 0.0, 0.0};
+
+  float epsilon = 1.0;
+
+  for (int row = 0 ; row < 10 ; ++row)
+  {
+    for (int col = 0 ; col < 10 ; ++col)
+    {
+      means[col] += distances[row][col] / 10.0;
+    }
+  }
+
+  for (int row = 0 ; row < 10 ; ++row)
+  {
+    for (int col = 0 ; col < 10 ; ++col)
+    {
+
+      variances[col] += (distances[row][col] - means[col]) *  (distances[row][col] - means[col]) / 10.0; 
+    }
+  }
+
+ 
   for(int i=0;i<5;i++){
-    ir_data[i] = convertVoltageToDistance(analogRead(ir_receiver_pins[i]));
+    if (variances[i] > epsilon)
+    {
+      ir_data[i] = (1 << 32);
+    }
+    else
+    {
+      ir_data[i] = (uint32_t) means[i];
+    }
   }
 }
 
