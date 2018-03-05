@@ -90,6 +90,7 @@ class Arnold:
             self.pid_output = self.pid_tracking.update_tracking(self.ultra_data.get_left(),
                                                        self.ultra_data.get_right(),
                                                        self.ultra_data.timestamp)
+            #self.motors.set_turning_rate(-self.pid_output)
 
             dist = (self.ultra_data.get_left() + self.ultra_data.get_right()) / 2
             spd = 0
@@ -100,7 +101,6 @@ class Arnold:
             else:
                 spd = self.constant_speed * (dist - 22500) / 2500
             self.motors.set_parameters(spd, -self.pid_output)
-
 
         elif self.acting_mode == self.Mode.OBSTACLE:
             if self.infra_data.get_infrared_sensor_data(0) != self.no_signal or self.infra_data.get_infrared_sensor_data(4) != self.no_signal:
