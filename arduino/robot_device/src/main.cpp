@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #define DEBUG 1
 
 // Tracking settings
@@ -6,27 +7,31 @@ const int kLeftEchoPin = 6;  // needs to be between 2 and 7 (inclusive)
 const int kRightEchoPin = 7;  // needs to be between 2 and 7 (inclusive)
 const uint32_t kReceiverTimeout = 110000;
 
-// IR Settings
-int ir_receiver_pins[] = {A1, A2, A3, A4, A5};
-uint32_t ir_data[] = {0, 0, 0, 0, 0};
-
-const String iID = "I";
-
 // Ultrasonic Settings
 struct TimeData {
-    uint32_t leftUD;
-    uint32_t rightUD;
+    uint32_t timeLeft;
+    uint32_t timeRight;
 };
 
 struct TimeData uTimeData;
-
-// This ID identifies ultrasonic data
-const String uID = "U";
 
 // Masks for echo pins
 const uint8_t kLeft = (1 << kLeftEchoPin);
 const uint8_t kRight = (1 << kRightEchoPin);
 const uint8_t kBoth = kLeft | kRight;
+
+// This ID identifies ultrasonic data
+const String uID = "U";
+
+// IR Settings
+const int kNrIRSensors = 3;
+const int kIRLowerBound = 5;
+const int kIRUpperBound = 75;
+int ir_receiver_pins[] = {A0, A1, A2};
+uint32_t ir_data[] = {0, 0, 0};
+
+// This ID identifies IR data
+const String iID = "I";
 
 // Radio settings
 const uint32_t kRadioDelay = 10000;  // Time of radio communication in microseconds
@@ -147,13 +152,14 @@ void measureTimes(uint32_t startTime)
     Serial.print("ERROR: Listening too late");
     Serial.print(kLineSep);
   }
-
-  uTimeData.timeLeft = 0xFFFFFFFF;   // Max number
-  uTimeData.timeRight = 0xFFFFFFFF;  // Max number
+  uint32_t *timeLeft = &(uTimeData.timeLeft);
+  uint32_t *timeRight = &(uTimeData.timeRight);
+  *timeLeft = 0xFFFFFFFF;   // Max number
+  *timeRight = 0xFFFFFFFF;  // Max number
   // Wait for echo pins to go low and note times
   while (echo != 0x00) {
     echo = getEcho(kBoth);
-    if ((uTimeData.timeLeft == 0xFFFFFFFF) && ((echo & kLeft) == 0))
+    if ((*timeLeft == 0xFFFFFFFF) && ((echo & kLeft) == 0))
       *timeLeft = micros() - startTime;
     if ((*timeRight == 0xFFFFFFFF) && ((echo & kRight) == 0))
       *timeRight = micros() - startTime;
@@ -195,62 +201,54 @@ void activateUltrasonic(int trigPin)
 
 /* IR Functions */
 uint32_t convertVoltageToDistance(int voltage){
-  return (voltage != 0) ? (uint32_t)(63438.5*pow(voltage, -1.15)+0.5) : kNoSig;
+  return (voltage > 20) ? (uint32_t)(4800/(voltage-20)) : kNoSig;
 }
 
 void listenForIR(){
-  
-  int distances[5][10];
- 
-  for (int row = 0 ; row < 10 ; ++row)
+  int nr_iterations = 5;
+  uint32_t distances[nr_iterations][kNrIRSensors];
+  for (int iteration = 0 ; iteration < nr_iterations ; ++iteration)
   {
-    for (int col = 0 ; col < 5 ; ++col)
+    for (int sensor = 0 ; sensor < kNrIRSensors ; ++sensor)
     {
-      distances[row][col] = convertVoltageToDistance(analogRead(ir_receiver_pins[i]));
+      distances[iteration][sensor] = convertVoltageToDistance(analogRead(ir_receiver_pins[sensor]));
     }
   }
   
-  float means[] = {0.0, 0.0, 0.0, 0.0, 0.0};
-  float variances[] = {0.0, 0.0, 0.0, 0.0, 0.0};
+  double means[] = {0.0, 0.0, 0.0};
+  // uint32_t variances[] = {0.0, 0.0, 0.0};
 
-  float epsilon = 1.0;
 
-  for (int row = 0 ; row < 10 ; ++row)
+  for (int row = 0 ; row < nr_iterations ; ++row)
   {
-    for (int col = 0 ; col < 10 ; ++col)
+    for (int col = 0 ; col < kNrIRSensors ; ++col)
     {
-      means[col] += distances[row][col] / 10.0;
+      means[col] += distances[row][col] / nr_iterations;
+      // variances[col] += (distances[row][col] - means[col]) *  (distances[row][col] - means[col]) / nr_iterations;
     }
   }
 
-  for (int row = 0 ; row < 10 ; ++row)
-  {
-    for (int col = 0 ; col < 10 ; ++col)
-    {
-
-      variances[col] += (distances[row][col] - means[col]) *  (distances[row][col] - means[col]) / 10.0; 
-    }
-  }
-
- 
-  for(int i=0;i<5;i++){
-    if (variances[i] > epsilon)
-    {
-      ir_data[i] = (1 << 32);
-    }
-    else
-    {
-      ir_data[i] = (uint32_t) means[i];
-    }
+  for(int i = 0; i < kNrIRSensors; i++ ){
+    // float epsilon = 1.0;
+    // if (variances[i] > epsilon)
+    // {
+    //   ir_data[i] = kNoSig;
+    // }
+    // else
+    // {
+    //   ir_data[i] = (uint32_t) means[i];
+    // }
+    if (means[i] > kIRUpperBound || means[i] < kIRLowerBound) ir_data[i] = kNoSig;
+    else ir_data[i] = (uint32_t) means[i];
   }
 }
 
 void sendUltraData() {
   Serial.print(kOpenMsg);
   Serial.print(uID);
-  Serial.print(uTimeData.leftUD);
+  Serial.print(uTimeData.timeLeft);
   Serial.print(" ");
-  Serial.print(uTimeData.rightUD);
+  Serial.print(uTimeData.timeRight);
   Serial.print(kCloseMsg);
   Serial.print(kLineSep);
   Serial.flush();
@@ -259,11 +257,11 @@ void sendUltraData() {
 void sendIRData(){
   Serial.print(kOpenMsg);
   Serial.print(iID);
-  for(int i = 0; i < 4; ++i){
+  for(int i = 0; i < kNrIRSensors - 1; ++i){
     Serial.print(ir_data[i]);
     Serial.print(" ");
   }
-  Serial.print(ir_data[4]);
+  Serial.print(ir_data[kNrIRSensors - 1]);
   Serial.print(kCloseMsg);
   Serial.print(kLineSep);
   Serial.flush();

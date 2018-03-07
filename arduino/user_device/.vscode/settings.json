@@ -1,0 +1,6 @@
+{
+    "terminal.integrated.env.linux": {
+        "PATH": "/afs/inf.ed.ac.uk/user/s14/s1447836/.platformio/penv/bin:/afs/inf.ed.ac.uk/user/s14/s1447836/.platformio/penv:/afs/inf.ed.ac.uk/user/s14/s1447836/miniconda2/bin:/afs/inf.ed.ac.uk/user/s14/s1447836/VSCode-linux-x64/bin:/usr/lib64/qt-3.3/bin:/opt/mendeleydesktop/bin:/usr/local/bin/:/usr/lib/jvm/java-1.8.0/bin/:/opt/texlive/2017/bin/x86_64-linux:/opt/matlab-R2015a/bin/:/usr/local/sbin:/usr/bin:/sbin:/opt/sicstus-4.0.1/bin",
+        "PLATFORMIO_CALLER": "vscode"
+    }
+}
