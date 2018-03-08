@@ -59,18 +59,20 @@ class Arnold:
                     if self.ultra_data != None: print('Ultrasonic: ', self.ultra_data)
                     if self.infra_data != None: print('Infrared: ', self.infra_data)
 
-
+                #TODO: work out priority of mode and when to switch
                 # If the data from the ultrasonics is old then switch modes
                 if self.ultra_data != None and int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
                     self.acting_mode = self.Mode.OBSTACLE
                     if __DEBUG__: print('Entering Obstacle Avoidance Mode')
                 elif self.infra_data != None:
                     self.acting_mode = self.Mode.OBSTACLE
+                elif self.ultra_data != None:
+                    self.acting_mode = self.Mode.FOLLOW
                 else:
                     self.acting_mode = self.Mode.WAIT
 
-                # Update motion based on current
-
+                # Update motion based on current data
+                # if we have data for any of the modes, we can actuate on them
                 if self.ultra_data != None or self.infra_data != None:
                     self.actuate()
                 elif __DEBUG__:
@@ -115,7 +117,8 @@ class Arnold:
                 if __DEBUG__:
                     print("Left distance is : {}".format(leftDistance))
                     print("Right distance is : {}".format(rightDistance))
-
+                # turn to make the difference of the distances of each side equal to 0, i.e. stay inbetween both obstacles or go
+                # straight if no obstacle in any side
                 self.pid_output = self.pid_avoidance.update_collision_avoidance(leftDistance - rightDistance, self.infra_data.timestamp)
 
                 self.motors.set_turning_rate(self.pid_output)
