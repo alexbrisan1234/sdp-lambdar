@@ -64,7 +64,7 @@ class ArnoldMotors:
     def calculateSpeeds(self):
         speedLeft = self.speed - self.tr/2
         speedRight = self.speed + self.tr/2
-        difference = 0;
+        difference = 0
         if speedRight > 1000 or speedLeft > 1000:
             #overflow; find maximum distance fromm 1000
             difference = max(speedRight - 1000, speedLeft - 1000)
@@ -74,7 +74,7 @@ class ArnoldMotors:
         #adjust boundaries: sign * abs adjusted value, rounded if needed
         speedRight = min(abs(speedRight - difference), 1000) * sign(speedRight)
         speedLeft = min(abs(speedLeft - difference), 1000) * sign(speedLeft)
-        #if (abs(self.tr) <= 2000): assert (self.tr == round(speedRight - speedLeft))
+        if (abs(self.tr) <= 2000): assert round(self.tr) == round(speedRight - speedLeft), str(self.tr) + " unequal to "+ str(speedRight - speedLeft)
         return (speedLeft, speedRight)
 
     def sign(self, number):
@@ -87,16 +87,13 @@ class ArnoldMotors:
         self.move()
 
     def set_speed(self, speed):
-        self.speed = speed
-        self.move()
+        self.set_parameters(speed, self.tr)
 
     def set_turning_rate(self, tr):
-        self.tr = tr
-        self.move()
+        self.set_parameters(self.speed, tr)
 
     def move_forwards(self, speed):
         self.set_parameters(speed, 0)
-        self.move()
 
     def move_backwards(self, speed):
         self.move_forwards(-speed)
