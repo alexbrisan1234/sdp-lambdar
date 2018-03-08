@@ -152,42 +152,42 @@ void measureTimes(uint32_t startTime)
     Serial.print("ERROR: Listening too late");
     Serial.print(kLineSep);
   }
-  uint32_t *timeLeft = &(uTimeData.timeLeft);
-  uint32_t *timeRight = &(uTimeData.timeRight);
-  *timeLeft = 0xFFFFFFFF;   // Max number
-  *timeRight = 0xFFFFFFFF;  // Max number
+  uint32_t &timeLeft = uTimeData.timeLeft;
+  uint32_t &timeRight = uTimeData.timeRight;
+  timeLeft = 0xFFFFFFFF;   // Max number
+  timeRight = 0xFFFFFFFF;  // Max number
   // Wait for echo pins to go low and note times
   while (echo != 0x00) {
     echo = getEcho(kBoth);
-    if ((*timeLeft == 0xFFFFFFFF) && ((echo & kLeft) == 0))
-      *timeLeft = micros() - startTime;
-    if ((*timeRight == 0xFFFFFFFF) && ((echo & kRight) == 0))
-      *timeRight = micros() - startTime;
+    if ((timeLeft == 0xFFFFFFFF) && ((echo & kLeft) == 0))
+      timeLeft = micros() - startTime;
+    if ((timeRight == 0xFFFFFFFF) && ((echo & kRight) == 0))
+      timeRight = micros() - startTime;
   }
 
   // Check for timeouts
-  if (*timeLeft > kReceiverTimeout) *timeLeft = 0xFFFFFFFF;
-  if (*timeRight > kReceiverTimeout) *timeRight = 0xFFFFFFFF;
+  if (timeLeft > kReceiverTimeout) timeLeft = 0xFFFFFFFF;
+  if (timeRight > kReceiverTimeout) timeRight = 0xFFFFFFFF;
 
   // Check radio delay
-  if (*timeLeft < kRadioDelay) {
+  if (timeLeft < kRadioDelay) {
     Serial.print("ERROR: Radio delay too high. timeLeft=");
-    Serial.print(*timeLeft);
+    Serial.print(timeLeft);
     Serial.print(kLineSep);
-    *timeLeft = 0xFFFFFFFF;
+    timeLeft = 0xFFFFFFFF;
   }
-  if (*timeRight < kRadioDelay) {
+  if (timeRight < kRadioDelay) {
     Serial.print("ERROR: Radio delay too high. timeRight=");
-    Serial.print(*timeRight);
+    Serial.print(timeRight);
     Serial.print(kLineSep);
-    *timeRight = 0xFFFFFFFF;
+    timeRight = 0xFFFFFFFF;
   }
 
   // Adjust for radio delay
-  if (*timeLeft != 0xFFFFFFFF)
-    *timeLeft -= kRadioDelay;
-  if (*timeRight!= 0xFFFFFFFF)
-    *timeRight -= kRadioDelay;
+  if (timeLeft != 0xFFFFFFFF)
+    timeLeft -= kRadioDelay;
+  if (timeRight!= 0xFFFFFFFF)
+    timeRight -= kRadioDelay;
 }
 
 void activateUltrasonic(int trigPin)
