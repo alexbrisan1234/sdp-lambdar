@@ -3,11 +3,12 @@ import serial
 import time
 import re
 from .leds import *
+import os
 
 __DEBUG__ = False
 
 ultra_pattern = re.compile('^<U[0-9]{1,10} [0-9]{1,10}>$')
-infra_pattern = re.compile('^<I[0-9]{1,10}( [0-9]{1,10}){4}>$')
+infra_pattern = re.compile('^<I[0-9]{1,10} [0-9]{1,10} [0-9]{1,10}>$')
 
 class Serial_Comm:
     def __init__(self, oport=None, obaudrate=9600, otimeout=None):

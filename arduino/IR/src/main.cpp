@@ -10,10 +10,6 @@ uint32_t ir_data[] = {0, 0, 0};
 // This ID identifies IR data
 const String iID = "I";
 
-// Radio settings
-const uint32_t kRadioDelay = 10000;  // Time of radio communication in microseconds
-const String kRadioRequestCode = "$$$";
-
 // Comm Settings
 // Code for no signal received
 const uint32_t kNoSig = 0xFFFFFFFF;

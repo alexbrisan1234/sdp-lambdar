@@ -4,8 +4,6 @@ from enum import Enum
 from src.code.control.motor import *
 from src.code.control.pid import PID
 import time
-import os
-
 
 __DEBUG__ = True
 
@@ -19,16 +17,16 @@ class Arnold:
         OBSTACLE = 2    # Activates on signal loss or path blockage. Robot switches to wall following
         WAIT = 3        # Halt actuation and wait for a usable
 
-    def __init__(self, cs=400, dur=5000, maxsp = 1000):
-        self.motors = ArnoldMotors({'frontLeft':'A','frontRight':'B','rearLeft':'C','rearRight':'D'}, cs);
-        self.acting_mode = self.Mode.FOLLOW
+    def __init__(self, cs=200, dur=5000, maxsp = 1000):
+        self.motors = ArnoldMotors({'frontLeft':'A','frontRight':'B','rearLeft':'C','rearRight':'D'}, cs)
+        self.acting_mode = self.Mode.WAIT
         # Catch error for incorrect serial port
 
 
         self.ser = Serial_Comm()
 
         self.pid_tracking = PID(P=2.0, I=0.0, D=0.0)
-        self.pid_avoidance = PID(P=0.5, I=0.0, D=0.0)
+        self.pid_avoidance = PID(P=5, I=0.0, D=0.0, SP = 0)
 
         self.constant_speed = cs
         self.left_speed = cs
@@ -66,12 +64,14 @@ class Arnold:
                 if self.ultra_data != None and int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
                     self.acting_mode = self.Mode.OBSTACLE
                     if __DEBUG__: print('Entering Obstacle Avoidance Mode')
+                elif self.infra_data != None:
+                    self.acting_mode = self.Mode.OBSTACLE
                 else:
-                    self.acting_mode = self.Mode.FOLLOW
+                    self.acting_mode = self.Mode.WAIT
 
                 # Update motion based on current
 
-                if self.ultra_data != None and self.infra_data != None:
+                if self.ultra_data != None or self.infra_data != None:
                     self.actuate()
                 elif __DEBUG__:
                     print('No data received')
@@ -102,26 +102,27 @@ class Arnold:
             self.motors.set_parameters(spd, -self.pid_output)
 
         elif self.acting_mode == self.Mode.OBSTACLE:
-            if self.infra_data.get_infrared_sensor_data(0) != self.no_signal or self.infra_data.get_infrared_sensor_data(4) != self.no_signal:
-                
-                self.obstacle_distance = min(self.infra_data.get_infrared_sensor_data(0), self.infra_data.get_infrared_sensor_data(4))    
-            
-                if self.obstacle_distance == self.infra_data.get_infrared_sensor_data(0):
-                    self.obstacle_position = 1
-                else:
-                    self.obstacle_position = 0    
-                
+            leftReading = self.infra_data.get_infrared_sensor_data(1)
+            rightReading = self.infra_data.get_infrared_sensor_data(2)
+            if leftReading != self.no_signal or rightReading != self.no_signal:
+                #self.obstacle_distance = min(self.infra_data.get_infrared_sensor_data(0), self.infra_data.get_infrared_sensor_data(2))    
+                #if self.obstacle_distance == self.infra_data.get_infrared_sensor_data(0):
+                #    self.obstacle_position = 1
+                #else:
+                #    self.obstacle_position = 0
+                leftDistance = min(leftReading, 80)
+                rightDistance = min(rightReading, 80)
                 if __DEBUG__:
-                    print("Obstacle position is : {}".format(self.obstacle_position))
-                    print("Obstacle distance is : {}".format(self.obstacle_distance))
+                    print("Left distance is : {}".format(leftDistance))
+                    print("Right distance is : {}".format(rightDistance))
 
-                self.pid_output = self.pid_avoidance.update_collision_avoidance(self.obstacle_distance, self.infra_data.timestamp)
+                self.pid_output = self.pid_avoidance.update_collision_avoidance(leftDistance - rightDistance, self.infra_data.timestamp)
 
                 self.motors.set_turning_rate(self.pid_output)
 
             # if there is no signal from both sides, turn to avoid the previously recorded corner
-            else:
-                self.motors.turn(1000, self.obstacle_position*constant_speed, (1-self.obstacle_position)*constant_speed)  
+            #else:
+            #    self.motors.turn(1000, self.obstacle_position*constant_speed, (1-self.obstacle_position)*constant_speed)  
 
         elif self.acting_mode == self.Mode.WAIT:
             if __DEBUG__:

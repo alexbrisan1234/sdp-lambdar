@@ -26,7 +26,7 @@ const String uID = "U";
 // IR Settings
 const int kNrIRSensors = 3;
 const int kIRLowerBound = 5;
-const int kIRUpperBound = 75;
+const int kIRUpperBound = 80;
 int ir_receiver_pins[] = {A0, A1, A2};
 uint32_t ir_data[] = {0, 0, 0};
 
