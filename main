@@ -123,39 +123,38 @@ class Arnold:
             rightReading = self.infra_data.get_infrared_sensor_data(2)
             middleReading = self.infra_data.get_infrared_sensor_data(0)
 
-            if leftReading != self.no_signal or rightReading != self.no_signal:
-                #self.obstacle_distance = min(self.infra_data.get_infrared_sensor_data(0), self.infra_data.get_infrared_sensor_data(2))    
-                #if self.obstacle_distance == self.infra_data.get_infrared_sensor_data(0):
-                #    self.obstacle_position = 1
-                #else:
-                #    self.obstacle_position = 0
-                leftDistance = min(leftReading, 80)
-                rightDistance = min(rightReading, 80)
-                middleDistance = min(middleReading, 80)
-
-                frontCoeff = 0
-                if middleDistance!=0 and middleDistance<80:
-                    #frontCoeff = 60000/(middleDistance*middleDistance - middleDistance)
-                    '''Will be 2000 (turning on the spot when middleDistance==20. Change 20 to change
-                       the threshold. Coeff will be halved every 10cm. Change 2 to change the ratio
-                       (e.g. divide by 3 or 4 every 10cm). Change 10 to halve more/less often.'''
-                    frontCoeff = 2000 * 2**((20 - middleDistance)/10)
-                    if leftDistance<rightDistance:
-                        frontCoeff = -1*frontCoeff
-
-                   # frontCoeff = (1+((leftDistance-rightDistance)/((abs(leftDistance-rightDistance))+1))) * 4000 / middleDistance -100
-               
-                if __DEBUG__:
-                    print("Left distance is : {}".format(leftDistance))
-                    print("Right distance is : {}".format(rightDistance))
-
-                self.pid_output = self.pid_avoidance.update_collision_avoidance(leftDistance - rightDistance + frontCoeff, self.infra_data.timestamp)
-
-                self.motors.set_turning_rate(self.pid_output)
-
-            # if there is no signal from both sides, turn to avoid the previously recorded corner
+            #self.obstacle_distance = min(self.infra_data.get_infrared_sensor_data(0), self.infra_data.get_infrared_sensor_data(2))    
+            #if self.obstacle_distance == self.infra_data.get_infrared_sensor_data(0):
+            #    self.obstacle_position = 1
             #else:
-            #    self.motors.turn(1000, self.obstacle_position*constant_speed, (1-self.obstacle_position)*constant_speed)  
+            #    self.obstacle_position = 0
+            leftDistance = min(leftReading, 70)
+            rightDistance = min(rightReading, 70)
+            middleDistance = min(middleReading, 70)
+
+            frontCoeff = 0
+            if middleDistance!=0 and middleDistance<70:
+                #frontCoeff = 60000/(middleDistance*middleDistance - middleDistance)
+                '''Will be 2000 (turning on the spot when middleDistance==20. Change 20 to change
+                    the threshold. Coeff will be halved every 10cm. Change 2 to change the ratio
+                    (e.g. divide by 3 or 4 every 10cm). Change 10 to halve more/less often.'''
+                frontCoeff = 2000 * 2**((20 - middleDistance)/10)
+                if leftDistance<rightDistance:
+                    frontCoeff = -1*frontCoeff
+
+                # frontCoeff = (1+((leftDistance-rightDistance)/((abs(leftDistance-rightDistance))+1))) * 4000 / middleDistance -100
+            
+            leftCoeff = 2000 * 2**((20 - leftDistance)/10)
+            rightCoeff = 2000 * 2**((20 - rightDistance)/10)
+            
+            if __DEBUG__:
+                print("Left distance is : {}".format(leftDistance))
+                print("Right distance is : {}".format(rightDistance))
+
+            self.pid_output = self.pid_avoidance.update_collision_avoidance(-leftCoeff + rightCoeff + frontCoeff, self.infra_data.timestamp)
+
+            self.motors.set_turning_rate(self.pid_output)
+ 
 
         elif self.acting_mode == self.Mode.WAIT:
             if __DEBUG__:
