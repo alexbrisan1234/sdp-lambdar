@@ -110,12 +110,12 @@ class Arnold:
 
             dist = (self.ultra_data.get_left() + self.ultra_data.get_right()) / 2
             spd = 0
-            if dist < 22500:
+            if dist < 31500:
                 spd = 0
-            elif dist > 25000:
+            elif dist > 33500:
                 spd = self.constant_speed
             else:
-                spd = self.constant_speed * (dist - 22500) / 2500
+                spd = self.constant_speed * (dist - 31500) / 2000
             self.motors.set_parameters(spd, -self.pid_output)
 
         elif self.acting_mode == self.Mode.OBSTACLE:
