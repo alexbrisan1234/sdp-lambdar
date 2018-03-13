@@ -73,21 +73,7 @@ class ArnoldMotors:
         #adjusts for over / underflows
         speedRight = min(self.maxSpeed, max(-self.maxSpeed, speedRight))
         speedLeft = min(self.maxSpeed, max(-self.maxSpeed, speedLeft))
-        #if speedRight > self.maxSpeed or speedLeft > 1000:
-        #    #overflow; find maximum distance fromm 1000
-        #    difference = max(speedRight - 1000, speedLeft - 1000)
-        #elif speedRight < -1000 or speedLeft < -1000:
-            #underflow; find min distance fromm -1000
-        #    difference = min(speedRight + 1000, speedLeft + 1000)
-        #adjust boundaries: sign * abs adjusted value, rounded if needed
-        #speedRight = min(abs(speedRight - difference), 1000) * sign(speedRight)
-        #speedLeft = min(abs(speedLeft - difference), 1000) * sign(speedLeft)
-        #if (abs(self.tr) <= 2000): assert round(self.tr) == round(speedRight - speedLeft), str(self.tr) + " unequal to "+ str(speedRight - speedLeft)
         return (speedLeft, speedRight)
-
-    #def sign(self, number):
-    #    if number < 0: return -1
-    #    return 1
 
     #turning rate should be between [-1,1]
     #-1 represents turn on the spot to the right
