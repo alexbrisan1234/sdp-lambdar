@@ -12,8 +12,13 @@ from src.code.control.pid import PID
 print("Importing time...")
 import time
 
+from math import exp
+
 __DEBUG__ = False
 __OUT_OF_RANGE_MESSAGE__ = 'OR'
+
+def smoothing(value):
+        return 317 / (1 + exp(-0.0232 * value))
 
 class Arnold:
     # Arnold's to main sensory inputs
@@ -129,7 +134,7 @@ class Arnold:
                 self.updateSpeed(self.ultra_data.get_left(), self.ultra_data.get_right())
                 trackCoeff = (self.ultra_data.get_right() - self.ultra_data.get_left()) / 600.0
                 trackCoeff = min(1, max(-1, trackCoeff))
-                print(trackCoeff)
+                if __DEBUG__ : print(trackCoeff)
                 timestamp = self.ultra_data.timestamp
 
             if self.infra_data:
@@ -159,9 +164,12 @@ class Arnold:
             #self.time = time.time()
             if trackCoeff - leftCoeff + rightCoeff < 0:
                 frontCoeff = -frontCoeff
-            self.pid_output = self.pid_avoidance.update(trackCoeff - leftCoeff + rightCoeff + frontCoeff, timestamp)
+
+            pid_input = smoothing(trackCoeff - leftCoeff + rightCoeff + frontCoeff)
+
+            self.pid_output = self.pid_avoidance.update(pid_input, timestamp)
             self.motors.set_parameters(self.speed, self.pid_output)
-            print("PID:", self.pid_output)
+            if __DEBUG__ : print("PID:", self.pid_output)
 
         elif self.acting_mode == self.Mode.WAIT:
             if __DEBUG__:
