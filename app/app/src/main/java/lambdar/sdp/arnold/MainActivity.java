@@ -13,6 +13,8 @@ import android.support.v4.app.NotificationManagerCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 import android.widget.TextView;
 
 
@@ -39,7 +41,6 @@ public class MainActivity extends Activity
     private Random prng = new Random(0);
     Map<String, TextView> fields = new HashMap<>();
     TextView previousView;
-
     private class MqttCallback implements Callback<MainActivity, MqttMessage>
     {
         public void accept(MainActivity activity, MqttMessage message)
@@ -54,7 +55,22 @@ public class MainActivity extends Activity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        Switch activateSwitch = (Switch)  findViewById(R.id.switch1);
+        TextView switchstatement = findViewById(R.id.manoraut);
+        activateSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked==true){
+                    Log.i(LOG_TAG,"ON");
+                    switchstatement.setText("Automatic");
+                    mHelper.sendMessage("arnold/topics", "START");
+                }
+                else {
+                    Log.i(LOG_TAG,"OF");
+                    switchstatement.setText("Manual");
+                    mHelper.sendMessage("arnold/topics","STOP");
+                }
+            }
+        });
         initMembers();
     }
 
