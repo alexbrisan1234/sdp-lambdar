@@ -10,14 +10,24 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import java.util.function.Consumer;
 
-public class ArnoldMQTTCallback implements MqttCallbackExtended
+import lambdar.sdp.arnold.MainActivity;
+
+public class ArnoldMQTTCallback<T> implements MqttCallbackExtended
 {
     private Consumer<MqttMessage> responseCallback;
+    private Callback<T,MqttMessage> java7Callback;
+    private T object;
 
     public ArnoldMQTTCallback() {}
     public ArnoldMQTTCallback(Consumer<MqttMessage> callback)
     {
         this . responseCallback = callback;
+    }
+
+    public ArnoldMQTTCallback(T object, Callback<T, MqttMessage> callback)
+    {
+        this.object = object;
+        this . java7Callback = callback;
     }
 
     @Override
@@ -35,10 +45,15 @@ public class ArnoldMQTTCallback implements MqttCallbackExtended
     @Override
     public void messageArrived(String topic, MqttMessage message) throws Exception
     {
-        Log.i(LOG_TAG, message.toString());
-        if (responseCallback != null)
+        // Log.i(LOG_TAG, message.toString());
+        /*if (responseCallback != null)
         {
             this . responseCallback . accept(message);
+        }
+        */
+        if (this.java7Callback != null)
+        {
+            this.java7Callback.accept(this.object, message);
         }
     }
 

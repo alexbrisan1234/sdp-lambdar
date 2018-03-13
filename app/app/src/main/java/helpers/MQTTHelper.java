@@ -10,6 +10,7 @@ import org.eclipse.paho.client.mqttv3.IMqttToken;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import static helpers.Constants.LOG_TAG;
 
@@ -101,6 +102,19 @@ public class MQTTHelper
         catch (MqttException ex)
         {
             ex.printStackTrace();
+        }
+    }
+
+    public void sendMessage(String topic, String message)
+    {
+        MqttMessage t_to_send = new MqttMessage(message.getBytes());
+        try
+        {
+            this . mqttAndroidClient . publish(topic, t_to_send);
+        }
+        catch (MqttException exc)
+        {
+            Log.e(LOG_TAG, exc.toString());
         }
     }
 
