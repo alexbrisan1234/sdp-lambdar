@@ -101,25 +101,53 @@ class Arnold:
 
     def actuate(self):
         'Logic for selecting an actuation strategy and activating motors'
+        '''
         if self.acting_mode == self.Mode.FOLLOW:
             # get the pid output to tune the speed and direction
-            self.pid_output = self.pid_tracking.update_tracking(self.ultra_data.get_left(),
+            self.motors.set_parameters(
+                self.get_following_output()
+            )
+
+        elif self.acting_mode == self.Mode.OBSTACLE:
+            self.motors.set_turning_rate(
+                self.get_avoidance_output()
+            )
+        '''
+
+        following_output = self.get_following_output()
+        avoidance_output = self.get_avoidance_output()
+
+        sign = lambda x : 1 if x > 0 else -1 if x < 0 else 0
+
+        if sign(following_output) == sign(avoidance_output):
+            self.motors.set_turning_rate(max(following_output, avoidance_output))
+        else:
+            self.motors.set_turning_rate(avoidance_output)
+
+        if self.acting_mode == self.Mode.WAIT:
+            if __DEBUG__:
+                print('Wait Mode')
+
+    def get_following_output(self):
+        pid_output = self.pid_tracking.update_tracking(self.ultra_data.get_left(),
                                                        self.ultra_data.get_right(),
                                                        self.ultra_data.timestamp)
             #self.motors.set_turning_rate(-self.pid_output)
 
-            dist = (self.ultra_data.get_left() + self.ultra_data.get_right()) / 2
+        dist = (self.ultra_data.get_left() + self.ultra_data.get_right()) / 2
+        spd = 0
+        if dist < 31500:
             spd = 0
-            if dist < 31500:
-                spd = 0
-            elif dist > 33500:
-                spd = self.constant_speed
-            else:
-                spd = self.constant_speed * (dist - 31500) / 2000
-            self.motors.set_parameters(spd, -self.pid_output)
+        elif dist > 33500:
+            spd = self.constant_speed
+        else:
+            spd = self.constant_speed * (dist - 31500) / 2000
+        
+        # self.motors.set_parameters(spd, -self.pid_output)
+        return pid_output
 
-        elif self.acting_mode == self.Mode.OBSTACLE:
-            leftReading = self.infra_data.get_infrared_sensor_data(1)
+    def get_avoidance_output(self):
+        leftReading = self.infra_data.get_infrared_sensor_data(1)
             rightReading = self.infra_data.get_infrared_sensor_data(2)
             middleReading = self.infra_data.get_infrared_sensor_data(0)
 
@@ -151,14 +179,11 @@ class Arnold:
                 print("Left distance is : {}".format(leftDistance))
                 print("Right distance is : {}".format(rightDistance))
 
-            self.pid_output = self.pid_avoidance.update_collision_avoidance(-leftCoeff + rightCoeff + frontCoeff, self.infra_data.timestamp)
+            pid_output = self.pid_avoidance.update_collision_avoidance(-leftCoeff + rightCoeff + frontCoeff, self.infra_data.timestamp)
 
-            self.motors.set_turning_rate(self.pid_output)
- 
+            # self.motors.set_turning_rate(self.pid_output)
 
-        elif self.acting_mode == self.Mode.WAIT:
-            if __DEBUG__:
-                print('Wait Mode')
+            return pid_output
 
     def update_state(self):
         if self.ultra_data != None and int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
