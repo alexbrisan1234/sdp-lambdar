@@ -49,6 +49,7 @@ class ArnoldMotors:
         self . motors = self.left + self.right
         self.speed = speed
         self.tr = tr
+        self.maxSpeed = 1000
 
     def move(self):
         speeds = self.calculateSpeeds()
@@ -62,25 +63,22 @@ class ArnoldMotors:
             rightMotor . run(speedRight)
 
     def calculateSpeeds(self):
-        speedLeft = self.speed - self.tr/2
-        speedRight = self.speed + self.tr/2
-        difference = 0
-        if speedRight > 1000 or speedLeft > 1000:
-            #overflow; find maximum distance fromm 1000
-            difference = max(speedRight - 1000, speedLeft - 1000)
-        elif speedRight < -1000 or speedLeft < -1000:
-            #underflow; find min distance fromm -1000
-            difference = min(speedRight + 1000, speedLeft + 1000)
-        #adjust boundaries: sign * abs adjusted value, rounded if needed
-        speedRight = min(abs(speedRight - difference), 1000) * sign(speedRight)
-        speedLeft = min(abs(speedLeft - difference), 1000) * sign(speedLeft)
-        if (abs(self.tr) <= 2000): assert round(self.tr) == round(speedRight - speedLeft), str(self.tr) + " unequal to "+ str(speedRight - speedLeft)
+        self.tr = min(1, max(-1, self.tr))
+        assert abs(self.tr) <= 1 , str(self.tr)
+        self.speed = min(self.speed, self.maxSpeed)
+        #turning rate is a factor of the separately given speed
+        speedLeft = self.speed * (1-abs(self.tr+1/2))
+        speedRight = self.speed * (1-abs(self.tr-1/2))
+        assert round(abs(speedLeft) + abs(speedRight)) == round(self.speed), str(speedLeft) + " "+ str(speedRight) + " != " + str (self.speed)
+        #adjusts for over / underflows
+        speedRight = min(self.maxSpeed, max(-self.maxSpeed, speedRight))
+        speedLeft = min(self.maxSpeed, max(-self.maxSpeed, speedLeft))
         return (speedLeft, speedRight)
 
-    def sign(self, number):
-        if number < 0: return -1
-        return 1
-
+    #turning rate should be between [-1,1]
+    #-1 represents turn on the spot to the right
+    #-0.5 turn to the right with one side no speed and the other full speed
+    #0 goes straight
     def set_parameters(self, speed, tr):
         self.speed = speed
         self.tr = tr
