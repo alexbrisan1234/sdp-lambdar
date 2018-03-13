@@ -31,7 +31,6 @@ class Arnold:
         # Catch error for incorrect serial port
         self.ser = Serial_Comm()
 
-        self.pid_tracking = PID(P=1.0/500.0, I=0.0, D=0.0)
         self.pid_avoidance = PID(P=1.0, I=0.0, D=200.0, SP = 0)
 
         self.constant_speed = cs
@@ -90,7 +89,7 @@ class Arnold:
                     self.__sentNotification = False
                     self.acting_mode = self.Mode.MOVE
                 else:
-                    self.acting_mode = self.Mode.MOVE
+                    self.acting_mode = self.Mode.WAIT
 
                 # Update motion based on current
                 # if we have data for any of the modes, we can actuate on them
@@ -132,44 +131,27 @@ class Arnold:
                 trackCoeff = min(1, max(-1, trackCoeff))
                 print(trackCoeff)
                 timestamp = self.ultra_data.timestamp
-                #self.pid_output_tracking = -self.pid_tracking.update_tracking(self.ultra_data.get_left(),
-                #                                                            self.ultra_data.get_right(),
-                #                                                            self.ultra_data.timestamp)
 
             if self.infra_data:
                 leftReading = self.infra_data.get_infrared_sensor_data(1)
                 rightReading = self.infra_data.get_infrared_sensor_data(2)
                 middleReading = self.infra_data.get_infrared_sensor_data(0)
 
-                #self.obstacle_distance = min(self.infra_data.get_infrared_sensor_data(0), self.infra_data.get_infrared_sensor_data(2))
-                #if self.obstacle_distance == self.infra_data.get_infrared_sensor_data(0):
-                #    self.obstacle_position = 1
-                #else:
-                #    self.obstacle_position = 0
                 leftDistance = min(leftReading, 70)
                 rightDistance = min(rightReading, 70)
                 middleDistance = min(middleReading, 70)
 
                 frontCoeff = 0
                 if middleDistance!=0 and middleDistance<70:
-                    #frontCoeff = 60000/(middleDistance*middleDistance - middleDistance)
                     '''Will be 1 (turning on the spot when middleDistance==20. Change 20 to change
                         the threshold. Coeff will be halved every 10cm. Change 2 to change the ratio
                         (e.g. divide by 3 or 4 every 10cm). Change 10 to halve more/less often.'''
                     frontCoeff = 1 * 2**((25 - middleDistance)/10)
 
-                    # frontCoeff = (1+((leftDistance-rightDistance)/((abs(leftDistance-rightDistance))+1))) * 4000 / middleDistance -100
-
                 leftCoeff = 1 * 2**((25 - leftDistance)/20)
                 rightCoeff = 1 * 2**((25 - rightDistance)/20)
 
                 timestamp = self.infra_data.timestamp
-                #if __DEBUG__:
-                    #print("Left distance is : {}".format(leftDistance))
-                    #print("Right distance is : {}".format(rightDistance))
-
-                #self.pid_output_avoidance = self.pid_avoidance.update_collision_avoidance(-leftCoeff + rightCoeff + frontCoeff, self.infra_data.timestamp)
-                #print("PID avoidance:", self.pid_output_avoidance)
             else:
                 self.pid_output_avoidance = 0.00
 
