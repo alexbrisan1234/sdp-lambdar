@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Arnold</string>
+    <string name="title_activity_swiper">SwiperActivity</string>
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_notifications">Notifications</string>
 </resources>

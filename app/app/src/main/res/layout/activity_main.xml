@@ -4,116 +4,56 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/blue"
     tools:context="lambdar.sdp.arnold.MainActivity">
 
 
-    <TextView
-        android:id="@+id/right"
-        android:layout_width="71dp"
-        android:layout_height="32dp"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginTop="8dp"
-        android:text="RIGHT"
-        android:textAppearance="@android:style/TextAppearance.Material.Large"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/left"
-        android:layout_width="66dp"
-        android:layout_height="36dp"
+    <Switch
+        android:id="@+id/switch2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
         android:layout_marginEnd="8dp"
         android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
-        android:text="LEFT"
-        android:textAppearance="@android:style/TextAppearance.Material.Large"
+        android:checked="false"
+        android:textAlignment="viewStart"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/right"
-        app:layout_constraintHorizontal_bias="0.134"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.679"
+        app:layout_constraintStart_toEndOf="@+id/manoraut"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.498" />
-
-    <TextView
-        android:id="@+id/down"
-        android:layout_width="67dp"
-        android:layout_height="35dp"
-        android:layout_marginBottom="64dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:text="DOWN"
-        android:textAppearance="@android:style/TextAppearance.Material.Large"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.501"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintVertical_bias="0.264" />
 
     <TextView
         android:id="@+id/manoraut"
-        android:layout_width="149dp"
-        android:layout_height="112dp"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:text="Manual"
+        android:layout_width="184dp"
+        android:layout_height="73dp"
+        android:layout_marginStart="28dp"
+        android:layout_marginTop="16dp"
         android:gravity="center"
+        android:text="Do Not Follow"
+        android:textAlignment="viewStart"
         android:textAppearance="@android:style/TextAppearance.Material.Large"
+        android:textColor="@android:color/white"
         android:textSize="24sp"
-        app:layout_constraintBottom_toTopOf="@+id/down"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.436"
-        />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
-        android:id="@+id/up"
-        android:layout_width="32dp"
-        android:layout_height="35dp"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:text="UP"
+        android:id="@+id/disturbia"
+        android:layout_width="184dp"
+        android:layout_height="73dp"
+        android:layout_marginStart="28dp"
+        android:layout_marginTop="112dp"
+        android:gravity="center"
+        android:text="Range Alarm"
+        android:textAlignment="viewStart"
         android:textAppearance="@android:style/TextAppearance.Material.Large"
-        app:layout_constraintBottom_toTopOf="@+id/down"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:textColor="@android:color/white"
+        android:textSize="24sp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.019" />
-
-    <Button
-        android:id="@+id/redButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:onClick="redPressed"
-        android:text="RED"
-        app:layout_constraintBottom_toTopOf="@+id/greenButton"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.191" />
-
-    <Button
-        android:id="@+id/greenButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="136dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:onClick="greenPressed"
-        android:text="GREEN"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <Switch
         android:id="@+id/switch1"
@@ -121,13 +61,23 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
         android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
+        android:checked="false"
         android:textAlignment="viewStart"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.083" />
+
+    <!--<ImageView-->
+        <!--android:id="@+id/imageView"-->
+        <!--android:layout_width="293dp"-->
+        <!--android:layout_height="458dp"-->
+        <!--android:layout_marginStart="44dp"-->
+        <!--android:layout_marginTop="100dp"-->
+        <!--android:src="@drawable/arnoldglowbright"-->
+        <!--app:layout_constraintStart_toStartOf="parent"-->
+        <!--app:layout_constraintTop_toTopOf="parent" />-->
 
     <!--<android.support.design.widget.BottomNavigationView-->
         <!--android:id="@+id/navigation"-->
@@ -139,6 +89,6 @@
         <!--app:layout_constraintBottom_toBottomOf="parent"-->
         <!--app:layout_constraintLeft_toLeftOf="parent"-->
         <!--app:layout_constraintRight_toRightOf="parent"-->
-        <!--app:menu="@menu/navigation" />-->
+        <!--app:menu="@menu/navigation"/>-->
 
 </android.support.constraint.ConstraintLayout>
