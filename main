@@ -31,7 +31,7 @@ class Arnold:
         # Catch error for incorrect serial port
         self.ser = Serial_Comm()
 
-        self.pid_avoidance = PID(P=1.0, I=0.0, D=200.0, SP = 0)
+        self.pid_avoidance = PID(P=0.9, I=0.0, D=200.0, SP = 0)
 
         self.constant_speed = cs
         self.left_speed = cs
@@ -48,6 +48,7 @@ class Arnold:
         self.ultra_data_is_old = False
 
         self.mqttHelper = MqttHelper()
+        self.is_on = False
 
         self.__sentNotification = False
         self.speed = cs
@@ -56,6 +57,7 @@ class Arnold:
             self.mqttHelper.connect()
             self.mqttHelper.listen()
         except:
+            self.is_on = True
             if __DEBUG__:
                 print('Could not connect to MQTT Helper')
 
@@ -63,6 +65,19 @@ class Arnold:
     def live(self):
         'Main loop of Arnold. Updates model and perform motions'
         while True:
+            switched_state = False
+
+            while not self.is_on:
+                self.is_on = self.mqttHelper.is_on()
+                if self.is_on:
+                    switched_state = True
+                    print('Started')
+            
+            if switched_state:
+                self.ser.clear_buffer()
+                self.motors.set_speed(self.speed)
+                continue
+
             try:
                 if __DEBUG__:print('Started Read')
                 new_data = self.ser.read_message()
@@ -103,6 +118,10 @@ class Arnold:
                 print('Aborting Robot Operation')
                 break
 
+            self.is_on = self.mqttHelper.is_on()
+            if not self.is_on:
+                print('Stopped')
+                self.motors.stop()
 
     def updateSpeed(self, left, right):
         dist = (left + right) / 2
@@ -129,7 +148,7 @@ class Arnold:
                 self.updateSpeed(self.ultra_data.get_left(), self.ultra_data.get_right())
                 trackCoeff = (self.ultra_data.get_right() - self.ultra_data.get_left()) / 600.0
                 trackCoeff = min(1, max(-1, trackCoeff))
-                print(trackCoeff)
+                #print(trackCoeff)
                 timestamp = self.ultra_data.timestamp
 
             if self.infra_data:
@@ -161,7 +180,7 @@ class Arnold:
                 frontCoeff = -frontCoeff
             self.pid_output = self.pid_avoidance.update(trackCoeff - leftCoeff + rightCoeff + frontCoeff, timestamp)
             self.motors.set_parameters(self.speed, self.pid_output)
-            print("PID:", self.pid_output)
+            #print("PID:", self.pid_output)
 
         elif self.acting_mode == self.Mode.WAIT:
             if __DEBUG__:
