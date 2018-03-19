@@ -1,12 +1,18 @@
 #! /usr/bin/python3
+print("Importing Serial_Comm...")
 from src.code.communication.comms import Serial_Comm
+print("Importing MqttHelper...")
 from src.code.communication.mqtt import MqttHelper
+print("Importing Enum...")
 from enum import Enum
+print("Importing ArnoldMotors...")
 from src.code.control.motor import ArnoldMotors
+print("Importing PID...")
 from src.code.control.pid import PID
+print("Importing time...")
 import time
 
-__DEBUG__ = True
+__DEBUG__ = False
 __OUT_OF_RANGE_MESSAGE__ = 'OR'
 
 class Arnold:
@@ -15,41 +21,43 @@ class Arnold:
     infra_data = None
 
     class Mode(Enum):
-        FOLLOW = 1      # Default operation mode. Robot will blindly follow the carrot
-        OBSTACLE = 2    # Activates on signal loss or path blockage. Robot switches to wall following
-        WAIT = 3        # Halt actuation and wait for a usable
+        MOVE = 1      # Default operation mode. Robot will blindly follow the carrot
+        WAIT = 2        # Halt actuation and wait for a usable
 
-    def __init__(self, cs=200, dur=5000, maxsp = 1000):
+    def __init__(self, cs=500, dur=5000, maxsp = 1000):
         self.motors = ArnoldMotors({'frontLeft':'A','frontRight':'B','rearLeft':'C','rearRight':'D'}, cs)
         self.acting_mode = self.Mode.WAIT
+        self.time = 0
         # Catch error for incorrect serial port
-
-
         self.ser = Serial_Comm()
 
-        self.pid_tracking = PID(P=2.0, I=0.0, D=0.0)
-        self.pid_avoidance = PID(P=1.0, I=0.0, D=0.0, SP = 0)
+        self.pid_avoidance = PID(P=0.9, I=0.0, D=200.0, SP = 0)
 
         self.constant_speed = cs
         self.left_speed = cs
         self.right_speed = cs
         self.duration = dur
-        self.obstacle_position = -1 
+        self.obstacle_position = -1
         self.obstacle_distance = 0
         self.pid_output = 0.00
+        self.pid_output_tracking = 0.00
+        self.pid_output_avoidance = 0.00
 
         self.max_speed = maxsp
         self.no_signal = 0xFFFFFFFF
         self.ultra_data_is_old = False
 
         self.mqttHelper = MqttHelper()
+        self.is_on = False
 
         self.__sentNotification = False
+        self.speed = cs
 
         try:
             self.mqttHelper.connect()
             self.mqttHelper.listen()
         except:
+            self.is_on = True
             if __DEBUG__:
                 print('Could not connect to MQTT Helper')
 
@@ -57,6 +65,19 @@ class Arnold:
     def live(self):
         'Main loop of Arnold. Updates model and perform motions'
         while True:
+            switched_state = False
+
+            while not self.is_on:
+                self.is_on = self.mqttHelper.is_on()
+                if self.is_on:
+                    switched_state = True
+                    print('Started')
+            
+            if switched_state:
+                self.ser.clear_buffer()
+                self.motors.set_speed(self.speed)
+                continue
+
             try:
                 if __DEBUG__:print('Started Read')
                 new_data = self.ser.read_message()
@@ -72,17 +93,16 @@ class Arnold:
                     if self.ultra_data != None: print('Ultrasonic: ', self.ultra_data)
                     if self.infra_data != None: print('Infrared: ', self.infra_data)
 
-                #TODO: work out priority of mode and when to switch
                 # If the data from the ultrasonics is old then switch modes
                 if self.ultra_data != None and int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
                     self.sendOutOfRangeNotification()
-                    self.acting_mode = self.Mode.OBSTACLE
+                    self.acting_mode = self.Mode.MOVE
                     if __DEBUG__: print('Entering Obstacle Avoidance Mode')
                 elif self.ultra_data != None:
                     if __DEBUG__:
                         print("We can now send notifications again")
                     self.__sentNotification = False
-                    self.acting_mode = self.Mode.FOLLOW
+                    self.acting_mode = self.Mode.MOVE
                 else:
                     self.acting_mode = self.Mode.WAIT
 
@@ -98,63 +118,69 @@ class Arnold:
                 print('Aborting Robot Operation')
                 break
 
+            self.is_on = self.mqttHelper.is_on()
+            if not self.is_on:
+                print('Stopped')
+                self.motors.stop()
+
+    def updateSpeed(self, left, right):
+        dist = (left + right) / 2
+        spd = 0
+        if dist < 31500:
+            spd = 0
+        elif dist > 33500:
+            spd = self.constant_speed
+        else:
+            spd = self.constant_speed * (dist - 31500) / 2000
+        self.speed = spd
+
 
     def actuate(self):
         'Logic for selecting an actuation strategy and activating motors'
-        if self.acting_mode == self.Mode.FOLLOW:
-            # get the pid output to tune the speed and direction
-            self.pid_output = self.pid_tracking.update_tracking(self.ultra_data.get_left(),
-                                                       self.ultra_data.get_right(),
-                                                       self.ultra_data.timestamp)
-            #self.motors.set_turning_rate(-self.pid_output)
+        leftCoeff = 0
+        rightCoeff = 0
+        frontCoeff = 0
+        trackCoeff = 0
+        timestamp = 0
 
-            dist = (self.ultra_data.get_left() + self.ultra_data.get_right()) / 2
-            spd = 0
-            if dist < 31500:
-                spd = 0
-            elif dist > 33500:
-                spd = self.constant_speed
+        if self.acting_mode == self.Mode.MOVE:
+            if self.ultra_data:
+                self.updateSpeed(self.ultra_data.get_left(), self.ultra_data.get_right())
+                trackCoeff = (self.ultra_data.get_right() - self.ultra_data.get_left()) / 600.0
+                trackCoeff = min(1, max(-1, trackCoeff))
+                #print(trackCoeff)
+                timestamp = self.ultra_data.timestamp
+
+            if self.infra_data:
+                leftReading = self.infra_data.get_infrared_sensor_data(1)
+                rightReading = self.infra_data.get_infrared_sensor_data(2)
+                middleReading = self.infra_data.get_infrared_sensor_data(0)
+
+                leftDistance = min(leftReading, 70)
+                rightDistance = min(rightReading, 70)
+                middleDistance = min(middleReading, 70)
+
+                frontCoeff = 0
+                if middleDistance!=0 and middleDistance<70:
+                    '''Will be 1 (turning on the spot when middleDistance==20. Change 20 to change
+                        the threshold. Coeff will be halved every 10cm. Change 2 to change the ratio
+                        (e.g. divide by 3 or 4 every 10cm). Change 10 to halve more/less often.'''
+                    frontCoeff = 1 * 2**((25 - middleDistance)/10)
+
+                leftCoeff = 1 * 2**((25 - leftDistance)/20)
+                rightCoeff = 1 * 2**((25 - rightDistance)/20)
+
+                timestamp = self.infra_data.timestamp
             else:
-                spd = self.constant_speed * (dist - 31500) / 2000
-            self.motors.set_parameters(spd, -self.pid_output)
+                self.pid_output_avoidance = 0.00
 
-        elif self.acting_mode == self.Mode.OBSTACLE:
-            leftReading = self.infra_data.get_infrared_sensor_data(1)
-            rightReading = self.infra_data.get_infrared_sensor_data(2)
-            middleReading = self.infra_data.get_infrared_sensor_data(0)
-
-            #self.obstacle_distance = min(self.infra_data.get_infrared_sensor_data(0), self.infra_data.get_infrared_sensor_data(2))    
-            #if self.obstacle_distance == self.infra_data.get_infrared_sensor_data(0):
-            #    self.obstacle_position = 1
-            #else:
-            #    self.obstacle_position = 0
-            leftDistance = min(leftReading, 70)
-            rightDistance = min(rightReading, 70)
-            middleDistance = min(middleReading, 70)
-
-            frontCoeff = 0
-            if middleDistance!=0 and middleDistance<70:
-                #frontCoeff = 60000/(middleDistance*middleDistance - middleDistance)
-                '''Will be 2000 (turning on the spot when middleDistance==20. Change 20 to change
-                    the threshold. Coeff will be halved every 10cm. Change 2 to change the ratio
-                    (e.g. divide by 3 or 4 every 10cm). Change 10 to halve more/less often.'''
-                frontCoeff = 2000 * 2**((20 - middleDistance)/10)
-                if leftDistance<rightDistance:
-                    frontCoeff = -1*frontCoeff
-
-                # frontCoeff = (1+((leftDistance-rightDistance)/((abs(leftDistance-rightDistance))+1))) * 4000 / middleDistance -100
-            
-            leftCoeff = 2000 * 2**((20 - leftDistance)/10)
-            rightCoeff = 2000 * 2**((20 - rightDistance)/10)
-            
-            if __DEBUG__:
-                print("Left distance is : {}".format(leftDistance))
-                print("Right distance is : {}".format(rightDistance))
-
-            self.pid_output = self.pid_avoidance.update_collision_avoidance(-leftCoeff + rightCoeff + frontCoeff, self.infra_data.timestamp)
-
-            self.motors.set_turning_rate(self.pid_output)
- 
+            #print(time.time()-self.time)
+            #self.time = time.time()
+            if trackCoeff - leftCoeff + rightCoeff < 0:
+                frontCoeff = -frontCoeff
+            self.pid_output = self.pid_avoidance.update(trackCoeff - leftCoeff + rightCoeff + frontCoeff, timestamp)
+            self.motors.set_parameters(self.speed, self.pid_output)
+            #print("PID:", self.pid_output)
 
         elif self.acting_mode == self.Mode.WAIT:
             if __DEBUG__:
@@ -177,5 +203,8 @@ class Arnold:
         self.mqttHelper.stop_listening()
 
 if __name__ == '__main__':
+    print("-------------------------------------")
+    print("Initialising Arnold...")
     arn = Arnold()
+    print('Going live!')
     arn.live()
