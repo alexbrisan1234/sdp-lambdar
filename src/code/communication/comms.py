@@ -24,6 +24,9 @@ class Serial_Comm:
 
         self.partial_msg = ''
 
+    def clear_buffer(self):
+        self.ser.read(self.ser.inWaiting())
+
     def read_message(self):
         '''
             Read a line at a time from the input buffer while it's not empty.

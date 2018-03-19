@@ -8,7 +8,11 @@ class MqttHelper:
         self.client = mqtt.Client()
         self.client.username_pw_set(username='gdsszota', password='F6am0LwBcGBG')
         self.messageQueue = []
+        self.on = False
 
+
+    def is_on(self):
+        return self.on
 
     '''
         This method connects the client to the cloud mqtt helper. 
@@ -41,6 +45,15 @@ class MqttHelper:
         Because we don't want to block the thread for long, we just add the payload to a message queue
     '''
     def received_message(self, client, userdata, message):
+        decoded = message.payload.decode()
+
+        if decoded == "START":
+            self.on = True
+            return
+        elif decoded == "STOP":
+            self.on = False
+            return
+
         self.messageQueue.append(message.payload.decode())
    
     '''
