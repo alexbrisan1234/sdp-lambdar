@@ -37,6 +37,8 @@ class Arnold:
         self.speed = cs
         self.constant_speed = cs
         self.pid_output = 0.00
+        self.pid_output_tracking = 0.00
+        self.pid_output_avoidance = 0.00
 
         self.ultra_data_is_old = False
 
@@ -44,6 +46,7 @@ class Arnold:
         self.is_on = False
 
         self.__sentNotification = False
+        self.speed = cs
 
         try:
             self.mqttHelper.connect()
@@ -58,8 +61,8 @@ class Arnold:
         while True:
             switched_state = False
             
-            #remove this when app is working
-            self.is_on = True
+            #uncomment this when app is not working
+            #self.is_on = True
 
             while not self.is_on:
                 self.is_on = self.mqttHelper.is_on()
@@ -110,8 +113,8 @@ class Arnold:
                 if __DEBUG__: print('Aborting Robot Operation')
                 break
 
-            #uncomment this when app is working
-            #self.is_on = self.mqttHelper.is_on()
+            #comment this when app is not working
+            self.is_on = self.mqttHelper.is_on()
             if not self.is_on:
                 if __DEBUG__: print('Stopped')
                 self.motors.stop()
@@ -130,7 +133,7 @@ class Arnold:
         self.speed = spd
 
     def calculateTrackingCoef(self):
-        #Divisor SHOULD BE proportional to speed --- IMPLEMENT THIS
+        #Divisor SHOULD BE proportional to speed --- NEED TO IMPLEMENT THIS
         trackCoeff = (self.ultra_data.get_right() - self.ultra_data.get_left()) / 900.0
         return min(1, max(-1, trackCoeff))
 
