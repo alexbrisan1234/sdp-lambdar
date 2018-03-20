@@ -69,7 +69,7 @@ class ArnoldMotors:
         #turning rate is a factor of the separately given speed
         speedLeft = self.speed * (1-abs(self.tr+1/2))
         speedRight = self.speed * (1-abs(self.tr-1/2))
-        assert round(abs(speedLeft) + abs(speedRight)) == round(self.speed), str(speedLeft) + " "+ str(speedRight) + " != " + str (self.speed)
+        # assert round(abs(speedLeft) + abs(speedRight)) == round(self.speed), str(speedLeft) + " "+ str(speedRight) + " != " + str (self.speed)
         #adjusts for over / underflows
         speedRight = min(self.maxSpeed, max(-self.maxSpeed, speedRight))
         speedLeft = min(self.maxSpeed, max(-self.maxSpeed, speedLeft))
