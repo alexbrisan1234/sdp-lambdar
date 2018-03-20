@@ -24,23 +24,20 @@ class Arnold:
         MOVE = 1      # Default operation mode. Robot will blindly follow the carrot
         WAIT = 2        # Halt actuation and wait for a usable
 
-    def __init__(self, cs=500, dur=5000, maxsp = 1000):
+    def __init__(self, cs=600, maxsp = 1200):
         self.motors = ArnoldMotors({'frontLeft':'A','frontRight':'B','rearLeft':'C','rearRight':'D'}, cs)
         self.acting_mode = self.Mode.WAIT
-        self.time = 0
+        #self.time = 0
         # Catch error for incorrect serial port
         self.ser = Serial_Comm()
-
-        self.pid_avoidance = PID(P=0.9, I=0.0, D=200.0, SP = 0)
+        self.pid_avoidance = PID(P=0.9, I=0.0, D=20.0, SP = 0)
 
         self.constant_speed = cs
         self.left_speed = cs
         self.right_speed = cs
-        self.duration = dur
         self.obstacle_position = -1
         self.obstacle_distance = 0
         self.pid_output = 0.00
-        self.pid_output_tracking = 0.00
         self.pid_output_avoidance = 0.00
 
         self.max_speed = maxsp
@@ -66,12 +63,13 @@ class Arnold:
         'Main loop of Arnold. Updates model and perform motions'
         while True:
             switched_state = False
+            self.is_on = True
 
             while not self.is_on:
                 self.is_on = self.mqttHelper.is_on()
                 if self.is_on:
                     switched_state = True
-                    print('Started')
+                    if __DEBUG__: print('Started')
             
             if switched_state:
                 self.ser.clear_buffer()
@@ -79,9 +77,9 @@ class Arnold:
                 continue
 
             try:
-                if __DEBUG__:print('Started Read')
+                if __DEBUG__: print('Started Read')
                 new_data = self.ser.read_message()
-                if __DEBUG__:print('Finished')
+                if __DEBUG__: print('Finished')
 
                 if new_data[0] != None:
                     self.ultra_data = new_data[0]
@@ -115,14 +113,15 @@ class Arnold:
 
             except KeyboardInterrupt:
                 self.motors.stop()
-                print('Aborting Robot Operation')
+                if __DEBUG__: print('Aborting Robot Operation')
                 break
 
-            self.is_on = self.mqttHelper.is_on()
+            #self.is_on = self.mqttHelper.is_on()
             if not self.is_on:
-                print('Stopped')
+                if __DEBUG__: print('Stopped')
                 self.motors.stop()
 
+    #speed should depend on distance from user and from obstacles
     def updateSpeed(self, left, right):
         dist = (left + right) / 2
         spd = 0
@@ -146,7 +145,8 @@ class Arnold:
         if self.acting_mode == self.Mode.MOVE:
             if self.ultra_data:
                 self.updateSpeed(self.ultra_data.get_left(), self.ultra_data.get_right())
-                trackCoeff = (self.ultra_data.get_right() - self.ultra_data.get_left()) / 600.0
+                #Divisor is proportional to speed
+                trackCoeff = (self.ultra_data.get_right() - self.ultra_data.get_left()) / 900.0
                 trackCoeff = min(1, max(-1, trackCoeff))
                 #print(trackCoeff)
                 timestamp = self.ultra_data.timestamp
@@ -173,7 +173,7 @@ class Arnold:
                 timestamp = self.infra_data.timestamp
             else:
                 self.pid_output_avoidance = 0.00
-
+                
             #print(time.time()-self.time)
             #self.time = time.time()
             if trackCoeff - leftCoeff + rightCoeff < 0:
@@ -185,14 +185,6 @@ class Arnold:
         elif self.acting_mode == self.Mode.WAIT:
             if __DEBUG__:
                 print('Wait Mode')
-
-    def update_state(self):
-        if self.ultra_data != None and int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
-            # self.acting_mode = self.Mode.OBSTACLE
-            if __DEBUG__:
-                print('Entering Obstacle Avoidance Mode')
-        else:
-            self.acting_mode = self.Mode.FOLLOW
 
     def sendOutOfRangeNotification(self):
         if not self.__sentNotification:

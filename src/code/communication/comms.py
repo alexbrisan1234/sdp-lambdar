@@ -7,8 +7,8 @@ import os
 
 __DEBUG__ = False
 
-ultra_pattern = re.compile('^<U[0-9]{1,10} [0-9]{1,10}>$')
-infra_pattern = re.compile('^<I[0-9]{1,10} [0-9]{1,10} [0-9]{1,10}>$')
+ultra_pattern = re.compile('^<U([0-9]{1,10}|-) ([0-9]{1,10}|-)>$')
+infra_pattern = re.compile('^<I([0-9]{1,10}|-) ([0-9]{1,10}|-) ([0-9]{1,10}|-)>$')
 
 class Serial_Comm:
     def __init__(self, oport=None, obaudrate=9600, otimeout=None):
@@ -93,7 +93,8 @@ class Message(list):
 
     def __init__(self, msg):
         #STM Filtering data more
-        values = [int(d) for d in msg[2:-1].split(' ')]
+
+        values = [int(d) if d != '-' else self.no_sig for d in msg[2:-1].split(' ')]
         self.timestamp = int(round(time.time() * 1000))
 
         if ultra_pattern.match(msg):
@@ -141,6 +142,6 @@ if __name__ == '__main__':
 
     while True:
         msgs = ard.read_message()
-        print('Ultrasonic: ', msg[0])
-        print('Infrared: ', msg[1])
+        if __DEBUG__: print('Ultrasonic: ', msg[0])
+        if __DEBUG__: print('Infrared: ', msg[1])
 

@@ -32,7 +32,7 @@ const String kRadioRequestCode = "$$$";
 
 // Comm Settings
 const uint32_t kNoSig = 0xFFFFFFFF;  // Code for no signal received
-const char kNoSigSent = "-"; // Code to send for no signal
+const char kNoSigSent = '-'; // Code to send for no signal
 const String uID = "U";  // This ID identifies ultrasonic data
 const String iID = "I";  // This ID identifies IR data
 const String kOpenMsg = "<";   // Code identifies beginning of message
@@ -217,9 +217,9 @@ void listenForIR(){
 void sendUltraData() {
   Serial.print(kOpenMsg);
   Serial.print(uID);
-  Serial.print((uTimeData.timeLeft == kNoSig) ? kNoSigSent : uTimeData.timeLeft);
+  if (uTimeData.timeLeft == kNoSig) Serial.print(kNoSigSent); else Serial.print(uTimeData.timeLeft);
   Serial.print(" ");
-  Serial.print((uTimeData.timeRight == kNoSig) ? kNoSigSent : uTimeData.timeRight);
+  if (uTimeData.timeRight == kNoSig) Serial.print(kNoSigSent); else Serial.print(uTimeData.timeRight);
   Serial.print(kCloseMsg);
   Serial.print(kLineSep);
   Serial.flush();
@@ -229,10 +229,10 @@ void sendIRData(){
   Serial.print(kOpenMsg);
   Serial.print(iID);
   for(int i = 0; i < kNrIRSensors - 1; ++i){
-    Serial.print((ir_data[i] == kNoSig) ? kNoSigSent : ir_data[i]);
+    if (ir_data[i] == kNoSig) Serial.print(kNoSigSent); else Serial.print(ir_data[i]);
     Serial.print(" ");
   }
-  Serial.print((ir_data[kNrIRSensors - 1] == kNoSig) ? kNoSigSent : ir_data[kNrIRSensors - 1]);
+  if (ir_data[kNrIRSensors - 1] == kNoSig) Serial.print(kNoSigSent); else Serial.print(ir_data[kNrIRSensors - 1]);
   Serial.print(kCloseMsg);
   Serial.print(kLineSep);
   Serial.flush();
