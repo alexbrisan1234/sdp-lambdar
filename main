@@ -35,10 +35,9 @@ class Arnold:
         self.constant_speed = cs
         self.left_speed = cs
         self.right_speed = cs
-        self.obstacle_position = -1
-        self.obstacle_distance = 0
+        self.kNoObstacleDistance = 70
         self.pid_output = 0.00
-        self.pid_output_avoidance = 0.00
+        #self.pid_output_avoidance = 0.00
 
         self.max_speed = maxsp
         self.no_signal = 0xFFFFFFFF
@@ -121,7 +120,7 @@ class Arnold:
                 if __DEBUG__: print('Stopped')
                 self.motors.stop()
 
-    #speed should depend on distance from user and from obstacles
+    #speed should depend on distance from user and from closest obstacle
     def updateSpeed(self, left, right):
         dist = (left + right) / 2
         spd = 0
@@ -145,7 +144,7 @@ class Arnold:
         if self.acting_mode == self.Mode.MOVE:
             if self.ultra_data:
                 self.updateSpeed(self.ultra_data.get_left(), self.ultra_data.get_right())
-                #Divisor is proportional to speed
+                #Divisor SHOULD BE proportional to speed
                 trackCoeff = (self.ultra_data.get_right() - self.ultra_data.get_left()) / 900.0
                 trackCoeff = min(1, max(-1, trackCoeff))
                 #print(trackCoeff)
@@ -171,8 +170,8 @@ class Arnold:
                 rightCoeff = 1 * 2**((25 - rightDistance)/20)
 
                 timestamp = self.infra_data.timestamp
-            else:
-                self.pid_output_avoidance = 0.00
+#            else:
+#                self.pid_output_avoidance = 0.00
                 
             #print(time.time()-self.time)
             #self.time = time.time()
