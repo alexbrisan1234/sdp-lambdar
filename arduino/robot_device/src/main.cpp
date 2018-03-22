@@ -2,6 +2,7 @@
 //#define DEBUG
 
 // Ultrasonic Settings
+const uint32_t kTimeout = 60000;
 const int kTrigAllPin = 5;  // All receivers are connected to this pin
 const int kLeftEchoPin = 6;  // needs to be between 2 and 7 (inclusive)
 const int kRightEchoPin = 7;  // needs to be between 2 and 7 (inclusive)
@@ -31,6 +32,7 @@ const String kRadioRequestCode = "$$$";
 
 // Comm Settings
 const uint32_t kNoSig = 0xFFFFFFFF;  // Code for no signal received
+const char kNoSigSent = '-'; // Code to send for no signal
 const String uID = "U";  // This ID identifies ultrasonic data
 const String iID = "I";  // This ID identifies IR data
 const String kOpenMsg = "<";   // Code identifies beginning of message
@@ -159,17 +161,24 @@ void measureTimes(uint32_t startTime)
     return;
   }
   // Wait for echo pins to go low and note times
+  uint32_t start = micros();
+  uint32_t nr_iters = 0;
   while (echo != 0x00) {
     echo = getEcho(kBoth);
-    if ((timeLeft == 0xFFFFFFFF) && ((echo & kLeft) == 0))
+    if ((timeLeft == kNoSig) && ((echo & kLeft) == 0))
       timeLeft = micros() - startTime;
-    if ((timeRight == 0xFFFFFFFF) && ((echo & kRight) == 0))
+    if ((timeRight == kNoSig) && ((echo & kRight) == 0))
       timeRight = micros() - startTime;
+    //every 1000 iterations, we check if the loop runtime exceeded the timeout
+    //If it did, break to avoid waiting unnecessarily for a sensor timeout
+    //Do it only every 1000 iterations because micros() is an expensive op
+    //if first part of condition is false, second part won't be evaluted
+    if (nr_iters % 1000 == 0 && (micros()-start) > kTimeout ) break;
   }
 
   // Check for timeouts
-  if (timeLeft > kReceiverTimeout) timeLeft = 0xFFFFFFFF;
-  if (timeRight > kReceiverTimeout) timeRight = 0xFFFFFFFF;
+  if (timeLeft > kReceiverTimeout) timeLeft = kNoSig;
+  if (timeRight > kReceiverTimeout) timeRight = kNoSig;
 }
 
 void activateUltrasonic(int trigPin)
@@ -208,9 +217,9 @@ void listenForIR(){
 void sendUltraData() {
   Serial.print(kOpenMsg);
   Serial.print(uID);
-  Serial.print(uTimeData.timeLeft);
+  if (uTimeData.timeLeft == kNoSig) Serial.print(kNoSigSent); else Serial.print(uTimeData.timeLeft);
   Serial.print(" ");
-  Serial.print(uTimeData.timeRight);
+  if (uTimeData.timeRight == kNoSig) Serial.print(kNoSigSent); else Serial.print(uTimeData.timeRight);
   Serial.print(kCloseMsg);
   Serial.print(kLineSep);
   Serial.flush();
@@ -220,10 +229,10 @@ void sendIRData(){
   Serial.print(kOpenMsg);
   Serial.print(iID);
   for(int i = 0; i < kNrIRSensors - 1; ++i){
-    Serial.print(ir_data[i]);
+    if (ir_data[i] == kNoSig) Serial.print(kNoSigSent); else Serial.print(ir_data[i]);
     Serial.print(" ");
   }
-  Serial.print(ir_data[kNrIRSensors - 1]);
+  if (ir_data[kNrIRSensors - 1] == kNoSig) Serial.print(kNoSigSent); else Serial.print(ir_data[kNrIRSensors - 1]);
   Serial.print(kCloseMsg);
   Serial.print(kLineSep);
   Serial.flush();

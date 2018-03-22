@@ -14,6 +14,8 @@ import time
 
 __DEBUG__ = False
 __OUT_OF_RANGE_MESSAGE__ = 'OR'
+__NO_OBSTACLE_DISTANCE__ = 70
+__NO__SIGNAL__ = 0xFFFFFFFF
 
 class Arnold:
     # Arnold's to main sensory inputs
@@ -24,27 +26,20 @@ class Arnold:
         MOVE = 1      # Default operation mode. Robot will blindly follow the carrot
         WAIT = 2        # Halt actuation and wait for a usable
 
-    def __init__(self, cs=500, dur=5000, maxsp = 1000):
+    def __init__(self, cs=600):
         self.motors = ArnoldMotors({'frontLeft':'A','frontRight':'B','rearLeft':'C','rearRight':'D'}, cs)
         self.acting_mode = self.Mode.WAIT
-        self.time = 0
+        #self.time = 0
         # Catch error for incorrect serial port
         self.ser = Serial_Comm()
-
-        self.pid_avoidance = PID(P=0.9, I=0.0, D=200.0, SP = 0)
-
+        self.pid_avoidance = PID(P=0.9, I=0.0, D=20.0, SP = 0)
+        
+        self.speed = cs
         self.constant_speed = cs
-        self.left_speed = cs
-        self.right_speed = cs
-        self.duration = dur
-        self.obstacle_position = -1
-        self.obstacle_distance = 0
         self.pid_output = 0.00
         self.pid_output_tracking = 0.00
         self.pid_output_avoidance = 0.00
 
-        self.max_speed = maxsp
-        self.no_signal = 0xFFFFFFFF
         self.ultra_data_is_old = False
 
         self.mqttHelper = MqttHelper()
@@ -58,20 +53,22 @@ class Arnold:
             self.mqttHelper.listen()
         except:
             self.is_on = True
-            if __DEBUG__:
-                print('Could not connect to MQTT Helper')
+            if __DEBUG__:   print('Could not connect to MQTT Helper')
 
 
     def live(self):
         'Main loop of Arnold. Updates model and perform motions'
         while True:
             switched_state = False
+            
+            #uncomment this when app is not working
+            #self.is_on = True
 
             while not self.is_on:
                 self.is_on = self.mqttHelper.is_on()
                 if self.is_on:
                     switched_state = True
-                    print('Started')
+                    if __DEBUG__: print('Started')
             
             if switched_state:
                 self.ser.clear_buffer()
@@ -79,28 +76,27 @@ class Arnold:
                 continue
 
             try:
-                if __DEBUG__:print('Started Read')
+                if __DEBUG__: print('Started Read')
                 new_data = self.ser.read_message()
-                if __DEBUG__:print('Finished')
+                if __DEBUG__: print('Finished')
 
-                if new_data[0] != None:
+                if new_data[0]:
                     self.ultra_data = new_data[0]
 
-                if new_data[1] != None:
+                if new_data[1]:
                     self.infra_data = new_data[1]
 
                 if __DEBUG__ :
-                    if self.ultra_data != None: print('Ultrasonic: ', self.ultra_data)
-                    if self.infra_data != None: print('Infrared: ', self.infra_data)
+                    if self.ultra_data: print('Ultrasonic: ', self.ultra_data)
+                    if self.infra_data: print('Infrared: ', self.infra_data)
 
                 # If the data from the ultrasonics is old then switch modes
-                if self.ultra_data != None and int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
+                if self.ultra_data and int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
                     self.sendOutOfRangeNotification()
                     self.acting_mode = self.Mode.MOVE
                     if __DEBUG__: print('Entering Obstacle Avoidance Mode')
-                elif self.ultra_data != None:
-                    if __DEBUG__:
-                        print("We can now send notifications again")
+                elif self.ultra_data:
+                    if __DEBUG__: print("We can now send notifications again")
                     self.__sentNotification = False
                     self.acting_mode = self.Mode.MOVE
                 else:
@@ -108,24 +104,26 @@ class Arnold:
 
                 # Update motion based on current
                 # if we have data for any of the modes, we can actuate on them
-                if self.ultra_data != None or self.infra_data != None:
+                if self.ultra_data or self.infra_data:
                     self.actuate()
-                elif __DEBUG__:
-                    print('No data received')
+                elif __DEBUG__: print('No data received')
 
             except KeyboardInterrupt:
                 self.motors.stop()
-                print('Aborting Robot Operation')
+                if __DEBUG__: print('Aborting Robot Operation')
                 break
 
+            #comment this when app is not working
             self.is_on = self.mqttHelper.is_on()
             if not self.is_on:
-                print('Stopped')
+                if __DEBUG__: print('Stopped')
                 self.motors.stop()
 
-    def updateSpeed(self, left, right):
+    #speed should depend on distance from user and from closest obstacle
+    def updateSpeed(self, left, right, obstacleDistance = __NO_OBSTACLE_DISTANCE__):
         dist = (left + right) / 2
         spd = 0
+        #too close to the user, robot stops
         if dist < 31500:
             spd = 0
         elif dist > 33500:
@@ -134,6 +132,10 @@ class Arnold:
             spd = self.constant_speed * (dist - 31500) / 2000
         self.speed = spd
 
+    def calculateTrackingCoef(self):
+        #Divisor SHOULD BE proportional to speed --- NEED TO IMPLEMENT THIS
+        trackCoeff = (self.ultra_data.get_right() - self.ultra_data.get_left()) / 900.0
+        return min(1, max(-1, trackCoeff))
 
     def actuate(self):
         'Logic for selecting an actuation strategy and activating motors'
@@ -146,9 +148,8 @@ class Arnold:
         if self.acting_mode == self.Mode.MOVE:
             if self.ultra_data:
                 self.updateSpeed(self.ultra_data.get_left(), self.ultra_data.get_right())
-                trackCoeff = (self.ultra_data.get_right() - self.ultra_data.get_left()) / 600.0
-                trackCoeff = min(1, max(-1, trackCoeff))
-                #print(trackCoeff)
+                trackCoeff = self.calculateTrackingCoef()
+                if __DEBUG__: print(trackCoeff)
                 timestamp = self.ultra_data.timestamp
 
             if self.infra_data:
@@ -156,12 +157,12 @@ class Arnold:
                 rightReading = self.infra_data.get_infrared_sensor_data(2)
                 middleReading = self.infra_data.get_infrared_sensor_data(0)
 
-                leftDistance = min(leftReading, 70)
-                rightDistance = min(rightReading, 70)
-                middleDistance = min(middleReading, 70)
+                leftDistance = min(leftReading, __NO_OBSTACLE_DISTANCE__)
+                rightDistance = min(rightReading, __NO_OBSTACLE_DISTANCE__)
+                middleDistance = min(middleReading, __NO_OBSTACLE_DISTANCE__)
 
                 frontCoeff = 0
-                if middleDistance!=0 and middleDistance<70:
+                if middleDistance!=0 and middleDistance < __NO_OBSTACLE_DISTANCE__:
                     '''Will be 1 (turning on the spot when middleDistance==20. Change 20 to change
                         the threshold. Coeff will be halved every 10cm. Change 2 to change the ratio
                         (e.g. divide by 3 or 4 every 10cm). Change 10 to halve more/less often.'''
@@ -171,28 +172,15 @@ class Arnold:
                 rightCoeff = 1 * 2**((25 - rightDistance)/20)
 
                 timestamp = self.infra_data.timestamp
-            else:
-                self.pid_output_avoidance = 0.00
 
-            #print(time.time()-self.time)
-            #self.time = time.time()
             if trackCoeff - leftCoeff + rightCoeff < 0:
                 frontCoeff = -frontCoeff
             self.pid_output = self.pid_avoidance.update(trackCoeff - leftCoeff + rightCoeff + frontCoeff, timestamp)
             self.motors.set_parameters(self.speed, self.pid_output)
-            #print("PID:", self.pid_output)
+            if __DEBUG__: print("PID:", self.pid_output)
 
         elif self.acting_mode == self.Mode.WAIT:
-            if __DEBUG__:
-                print('Wait Mode')
-
-    def update_state(self):
-        if self.ultra_data != None and int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
-            # self.acting_mode = self.Mode.OBSTACLE
-            if __DEBUG__:
-                print('Entering Obstacle Avoidance Mode')
-        else:
-            self.acting_mode = self.Mode.FOLLOW
+            if __DEBUG__: print('Wait Mode')
 
     def sendOutOfRangeNotification(self):
         if not self.__sentNotification:
