@@ -40,7 +40,7 @@ class Serial_Comm:
         msg = ''
         try:
             # Read the entire buffer string and convert to list of strings
-            buf = self.partial_msg + self.ser.read(inBuffer).decode()
+            buf = self.partial_msg + self.ser.read(inBuffer).decode(errors='ignore')
             lines = buf.split('|')
             if __DEBUG__: print(lines)  # VERY useful
             if ultra_pattern.match(lines[-1]) or infra_pattern.match(lines[-1]):
