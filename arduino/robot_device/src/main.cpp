@@ -40,7 +40,7 @@ const String kCloseMsg = ">";  // Code identifies end of message
 const String kLineSep = "|";
 
 // The must take at least this long (ms) because of user device
-const uint32_t kMinLoopTime = 127;
+const uint32_t kMinLoopTime = 147;
 
 /*
  * Used to activate the receivers
@@ -124,6 +124,7 @@ void loop()
 
   // Send data over serial to the ev3 brick
   digitalWrite(8,LOW);
+  delay(4);
   sendUltraData();
   sendIRData();
   delay(1);
@@ -142,7 +143,6 @@ void loop()
 void requestSignal() {
   Serial.print(kRadioRequestCode);
   Serial.print(kLineSep);
-  delay(15);
   Serial.flush();
 }
 
