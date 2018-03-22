@@ -126,12 +126,12 @@ class Arnold:
     def updateSpeed(self, left, right):
         dist = (left + right) / 2
         spd = 0
-        if dist < 31500:
+        if dist < 27000:
             spd = 0
-        elif dist > 33500:
+        elif dist > 29000:
             spd = self.constant_speed
         else:
-            spd = self.constant_speed * (dist - 31500) / 2000
+            spd = self.constant_speed * (dist - 27000) / 2000
         self.speed = spd
 
 
@@ -152,9 +152,9 @@ class Arnold:
                 timestamp = self.ultra_data.timestamp
 
             if self.infra_data:
-                leftReading = self.infra_data.get_infrared_sensor_data(1)
+                leftReading = self.infra_data.get_infrared_sensor_data(0)
                 rightReading = self.infra_data.get_infrared_sensor_data(2)
-                middleReading = self.infra_data.get_infrared_sensor_data(0)
+                middleReading = self.infra_data.get_infrared_sensor_data(1)
 
                 leftDistance = min(leftReading, 70)
                 rightDistance = min(rightReading, 70)
