@@ -124,12 +124,12 @@ class Arnold:
         dist = (left + right) / 2
         spd = 0
         #too close to the user, robot stops
-        if dist < 27000:
+        if dist < 26000:
             spd = 0
-        elif dist > 29000:
+        elif dist > 28000:
             spd = self.constant_speed
         else:
-            spd = self.constant_speed * (dist - 27000) / 2000
+            spd = self.constant_speed * (dist - 26000) / 2000
         self.speed = spd
 
     def calculateTrackingCoef(self):
