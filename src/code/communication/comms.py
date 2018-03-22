@@ -11,7 +11,7 @@ ultra_pattern = re.compile('^<U[0-9]{1,10} [0-9]{1,10}>$')
 infra_pattern = re.compile('^<I[0-9]{1,10} [0-9]{1,10} [0-9]{1,10}>$')
 
 class Serial_Comm:
-    def __init__(self, oport=None, obaudrate=9600, otimeout=None):
+    def __init__(self, oport=None, obaudrate=115200, otimeout=None):
         if oport == None:
             ports = os.listdir('/dev/')
             oport = '/dev/'+[p for p in ports if 'ACM' in p][0]
