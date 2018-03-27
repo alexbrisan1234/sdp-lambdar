@@ -40,7 +40,7 @@ const String kCloseMsg = ">";  // Code identifies end of message
 const String kLineSep = "|";
 
 // The must take at least this long (ms) because of user device
-const uint32_t kMinLoopTime = 127;
+const uint32_t kMinLoopTime = 147;
 
 /*
  * Used to activate the receivers
@@ -83,14 +83,14 @@ void sendIRData();
  */
 void sendUltraData();
 
-void setup() 
+void setup()
 {
   // Radio setup
   pinMode(8,OUTPUT); // switch off the radio
   digitalWrite(8,HIGH);
   pinMode(4,OUTPUT); // switch on the radio
   digitalWrite(4,LOW); // ensure the radio is not sleeping
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   // Tracking pins setup
   pinMode(kTrigAllPin, OUTPUT);
@@ -99,7 +99,7 @@ void setup()
   pinMode(kRightEchoPin, INPUT);
 }
 
-void loop() 
+void loop()
 {
   //Current time
   uint32_t t = millis();
@@ -124,16 +124,17 @@ void loop()
 
   // Send data over serial to the ev3 brick
   digitalWrite(8,LOW);
+  delay(4);
   sendUltraData();
   sendIRData();
   delay(1);
   digitalWrite(8,HIGH);
-  
+
   // If necessary, wait before next iteration
   t = millis() - t;
   if (t < kMinLoopTime)
     delay(kMinLoopTime - t);//*/
-  
+
 #ifdef DEBUG
   Serial.println(t);
 #endif  // DEBUG
@@ -201,7 +202,7 @@ void listenForIR(){
   for (int i = 0 ; i < nr_iterations ; ++i)
     for (int sensor = 0 ; sensor < kNrIRSensors ; ++sensor)
       distances[i][sensor] = convertVoltageToDistance(analogRead(ir_receiver_pins[sensor]));
-  
+
   double means[] = {0.0, 0.0, 0.0};
 
   for (int i = 0 ; i < nr_iterations ; ++i)

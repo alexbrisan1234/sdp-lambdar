@@ -124,12 +124,12 @@ class Arnold:
         dist = (left + right) / 2
         spd = 0
         #too close to the user, robot stops
-        if dist < 31500:
+        if dist < 26000:
             spd = 0
-        elif dist > 33500:
+        elif dist > 28000:
             spd = self.constant_speed
         else:
-            spd = self.constant_speed * (dist - 31500) / 2000
+            spd = self.constant_speed * (dist - 26000) / 2000
         self.speed = spd
 
     def calculateTrackingCoef(self):
@@ -153,9 +153,9 @@ class Arnold:
                 timestamp = self.ultra_data.timestamp
 
             if self.infra_data:
-                leftReading = self.infra_data.get_infrared_sensor_data(1)
+                leftReading = self.infra_data.get_infrared_sensor_data(0)
                 rightReading = self.infra_data.get_infrared_sensor_data(2)
-                middleReading = self.infra_data.get_infrared_sensor_data(0)
+                middleReading = self.infra_data.get_infrared_sensor_data(1)
 
                 leftDistance = min(leftReading, __NO_OBSTACLE_DISTANCE__)
                 rightDistance = min(rightReading, __NO_OBSTACLE_DISTANCE__)

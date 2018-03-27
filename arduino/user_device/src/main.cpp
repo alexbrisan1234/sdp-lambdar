@@ -13,13 +13,17 @@ void activateUltrasonic(int trigPin)
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   pinMode(8,OUTPUT); // switch on the radio
   digitalWrite(8,HIGH);
   pinMode(4,OUTPUT); // switch on the radio
   digitalWrite(4,LOW); // ensure the radio is not sleeping
+
   pinMode(pinTrig, OUTPUT);
   digitalWrite(pinTrig, LOW);
+
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
   delay(1000);
 }
 
@@ -27,4 +31,7 @@ void loop()
 {
   while(!Serial.find("$$$"));
   activateUltrasonic(pinTrig);
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(20);
+  digitalWrite(LED_BUILTIN, LOW);
 }
