@@ -9,6 +9,8 @@ __DEBUG__ = False
 
 ultra_pattern = re.compile('^<U([0-9]{1,10}|-) ([0-9]{1,10}|-)>$')
 infra_pattern = re.compile('^<I([0-9]{1,10}|-) ([0-9]{1,10}|-) ([0-9]{1,10}|-)>$')
+#matches opened lid
+lock_pattern = re.compile('^<L1>$')
 
 class Serial_Comm:
     def __init__(self, oport=None, obaudrate=115200, otimeout=None):
@@ -34,7 +36,8 @@ class Serial_Comm:
         self.initiate_transmission()
 
         # Message is essentially a list with some checking functions
-        msgs = (None, None)
+        #(ultrasonic, infra, lidOpened?(boolean))
+        msgs = (None, None, None)
         inBuffer = self.ser.inWaiting()
         if __DEBUG__: print(self.ser.inWaiting())
         msg = ''
@@ -43,26 +46,34 @@ class Serial_Comm:
             buf = self.partial_msg + self.ser.read(inBuffer).decode(errors='ignore')
             lines = buf.split('|')
             if __DEBUG__: print(lines)  # VERY useful
-            if ultra_pattern.match(lines[-1]) or infra_pattern.match(lines[-1]):
+            if any([regex.match(lines[-1]) for regex in [ultra_pattern, infra_pattern, lock_pattern]]):
                 self.partial_msg = ''
             else:
                 self.partial_msg = lines[-1]
-
-            # Filter the lines according to regex pattern then take the bottom two
-            valid_msgs_rec = [line for line in lines
-                    if ultra_pattern.match(line) or infra_pattern.match(line)][-2:]
+            
+            valid_msgs_rec = []
+            ultraFound = False
+            infraFound = False
+            lidOpened = False
+            for elem in reversed(lines):
+                if ultra_pattern.match(elem) and not ultraFound: 
+                    lines + elem
+                    ultraFound = True
+                elif infra_pattern.match(elem) and not infraFound: 
+                    lines + elem
+                    infraFound = True
+                elif lock_pattern.match(elem) and not lidOpened: lidOpened = True
 
             for msg in valid_msgs_rec:
                 try:
                     msg = Message(msg)
                 except IOError:
                     msg = ''
-
                 try:
                     if msg.msg_type == 'ultrasonic':
-                        msgs = (msg, msgs[1])
+                        msgs = (msg, msgs[1], lidOpened)
                     elif msg.msg_type == 'infrared':
-                        msgs = (msgs[0], msg)
+                        msgs = (msgs[0], msg, lidOpened)
                 except AttributeError:
                     pass
 
@@ -112,6 +123,9 @@ class Message(list):
         elif infra_pattern.match(msg):
             if __DEBUG__: print('Infra message received: ', msg)
             self.msg_type = 'infrared'
+        elif lock_pattern.match(msg):
+            if __DEBUG__: print('Lock message received: ', msg)
+            self.msg_type = 'lock'
         else: 
             raise IOError('Message was not well formed')
 

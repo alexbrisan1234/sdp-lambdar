@@ -1,1 +1,1 @@
-scp -r src main robot@ev3dev:~/code
+scp -r src main robot@ev3dev:~/

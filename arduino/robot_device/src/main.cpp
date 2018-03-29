@@ -6,6 +6,7 @@ const uint32_t kTimeout = 60000;
 const int kTrigAllPin = 5;  // All receivers are connected to this pin
 const int kLeftEchoPin = 6;  // needs to be between 2 and 7 (inclusive)
 const int kRightEchoPin = 7;  // needs to be between 2 and 7 (inclusive)
+const int kLockPin = 9;
 const uint32_t kReceiverTimeout = 110000;
 
 // Masks for echo pins
@@ -19,6 +20,9 @@ struct TimeData {
     uint32_t timeRight;
 };
 struct TimeData uTimeData;
+
+// Lock State
+int lock_state = -1;
 
 // IR Settings
 const int kNrIRSensors = 3;
@@ -35,6 +39,7 @@ const uint32_t kNoSig = 0xFFFFFFFF;  // Code for no signal received
 const char kNoSigSent = '-'; // Code to send for no signal
 const String uID = "U";  // This ID identifies ultrasonic data
 const String iID = "I";  // This ID identifies IR data
+const String lID = "L";  // This ID identifies IR data
 const String kOpenMsg = "<";   // Code identifies beginning of message
 const String kCloseMsg = ">";  // Code identifies end of message
 const String kLineSep = "|";
@@ -74,6 +79,15 @@ uint32_t convertVoltageToDistance(int voltage);
 void listenForIR();
 
 /*
+ * Reads the new lock state and returns true if changed
+ */
+int checkLock();
+
+/*
+ * Sends lock state over serial
+ */
+void sendLockData();
+/*
  * Sends IR data over serial
  */
 void sendIRData();
@@ -97,6 +111,7 @@ void setup()
   digitalWrite(kTrigAllPin, LOW);
   pinMode(kLeftEchoPin, INPUT);
   pinMode(kRightEchoPin, INPUT);
+  pinMode(kLockPin, INPUT_PULLUP);
 }
 
 void loop()
@@ -116,6 +131,8 @@ void loop()
 
   // Now we have about 20 ms to do stuff
   listenForIR();  // This only takes about 2.6 ms
+  
+  int lockStateChanged = checkLock();
 
   measureTimes(t0);
 
@@ -127,6 +144,7 @@ void loop()
   delay(4);
   sendUltraData();
   sendIRData();
+  if (lockStateChanged) sendLockData();
   delay(1);
   digitalWrite(8,HIGH);
 
@@ -196,6 +214,12 @@ uint32_t convertVoltageToDistance(int voltage){
   return (voltage > 20) ? (uint32_t)(4800/(voltage-20)) : kNoSig;
 }
 
+int checkLock() {
+  int oldState = lock_state;
+  lock_state = digitalRead(kLockPin);
+  return oldState - lock_state != 0;
+}
+
 void listenForIR(){
   const int nr_iterations = 5;
   uint32_t distances[nr_iterations][kNrIRSensors];
@@ -234,6 +258,15 @@ void sendIRData(){
     Serial.print(" ");
   }
   if (ir_data[kNrIRSensors - 1] == kNoSig) Serial.print(kNoSigSent); else Serial.print(ir_data[kNrIRSensors - 1]);
+  Serial.print(kCloseMsg);
+  Serial.print(kLineSep);
+  Serial.flush();
+}
+
+void sendLockData(){
+  Serial.print(kOpenMsg);
+  Serial.print(lID);
+  Serial.print(lock_state);
   Serial.print(kCloseMsg);
   Serial.print(kLineSep);
   Serial.flush();

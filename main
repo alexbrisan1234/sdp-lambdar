@@ -86,10 +86,13 @@ class Arnold:
                 if new_data[1]:
                     self.infra_data = new_data[1]
 
+                if new_data[2] == True:
+                    #check if anti theft is on and ALARRMMRMRMRMRMRMRM
+
                 if __DEBUG__ :
                     if self.ultra_data: print('Ultrasonic: ', self.ultra_data)
                     if self.infra_data: print('Infrared: ', self.infra_data)
-
+                    print('Lid Opened: ', new_data[2])
                 # If the data from the ultrasonics is old then switch modes
                 if self.ultra_data and int(round(time.time() * 1000)) - self.ultra_data.timestamp > 1000:
                     self.sendOutOfRangeNotification()
