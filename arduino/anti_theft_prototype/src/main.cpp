@@ -1,11 +1,11 @@
 #include <Arduino.h>
 
-constexpr int kPin = 13;
+constexpr int kPin = 9;
 int last_state;
 
 void setup() {
     // put your setup code here, to run once:
-    Serial.begin(9600);
+    Serial.begin(115200);
     pinMode(kPin, INPUT_PULLUP);
     last_state = digitalRead(kPin);
 }

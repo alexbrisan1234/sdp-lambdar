@@ -27,6 +27,12 @@ const int kIRUpperBound = 80;
 int ir_receiver_pins[] = {A0, A1, A2};
 uint32_t ir_data[] = {0, 0, 0};
 
+// Security Settings
+constexpr int kPin = 9;
+int last_state;
+const String kLockOpen = "O";
+const String kLockClose = "C";
+
 // Radio settings
 const String kRadioRequestCode = "$$$";
 
@@ -83,6 +89,11 @@ void sendIRData();
  */
 void sendUltraData();
 
+/*
+ * Checks the lock status
+ */
+void checkLock();
+
 void setup()
 {
   // Radio setup
@@ -97,10 +108,15 @@ void setup()
   digitalWrite(kTrigAllPin, LOW);
   pinMode(kLeftEchoPin, INPUT);
   pinMode(kRightEchoPin, INPUT);
+
+  // Pin for the security sensor
+  pinMode(kPin, INPUT_PULLUP);
+  last_state = digitalRead(kPin);
 }
 
 void loop()
 {
+  checkLock();
   //Current time
   uint32_t t = millis();
 
@@ -138,6 +154,24 @@ void loop()
 #ifdef DEBUG
   Serial.println(t);
 #endif  // DEBUG
+}
+
+void checkLock() {
+  int state = digitalRead(kPin);
+  if (last_state != state) {
+    if (state == HIGH) {
+      Serial.print(kOpenMsg);
+      Serial.print(kLockOpen);
+      Serial.print(kCloseMsg);
+    } else { 
+      Serial.print(kOpenMsg);
+      Serial.print(kLockClose);
+      Serial.print(kCloseMsg);
+    }
+    Serial.print(kLineSep);
+  }
+  last_state = state;
+  delay(10);
 }
 
 void requestSignal() {
@@ -238,3 +272,5 @@ void sendIRData(){
   Serial.print(kLineSep);
   Serial.flush();
 }
+
+// vim: set shiftwidth=2:
