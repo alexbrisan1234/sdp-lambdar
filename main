@@ -14,6 +14,7 @@ import time
 
 __DEBUG__ = False
 __OUT_OF_RANGE_MESSAGE__ = 'OR'
+__ALARM_MESSAGE__ = 'AL'
 __NO_OBSTACLE_DISTANCE__ = 70
 __NO__SIGNAL__ = 0xFFFFFFFF
 
@@ -21,6 +22,7 @@ class Arnold:
     # Arnold's to main sensory inputs
     ultra_data = None
     infra_data = None
+    lock_data = None
 
     class Mode(Enum):
         MOVE = 1      # Default operation mode. Robot will blindly follow the carrot
@@ -62,7 +64,7 @@ class Arnold:
             switched_state = False
             
             #uncomment this when app is not working
-            #self.is_on = True
+            self.is_on = True
 
             while not self.is_on:
                 self.is_on = self.mqttHelper.is_on()
@@ -85,6 +87,14 @@ class Arnold:
 
                 if new_data[1]:
                     self.infra_data = new_data[1]
+
+                # Retrieve the lock string from the message class
+                if new_data[2]:
+                    if new_data[2][0] != self.lock_data:
+                        self.lock_data = new_data[2][0]
+
+                    if self.lock_data == 'open' and self.mqttHelper.is_locked():
+                        self.alarm()
 
                 if __DEBUG__ :
                     if self.ultra_data: print('Ultrasonic: ', self.ultra_data)
@@ -187,8 +197,8 @@ class Arnold:
             self.mqttHelper.send_message(__OUT_OF_RANGE_MESSAGE__)
             self.__sentNotification = True
 
-    def __del__(self):
-        self.mqttHelper.stop_listening()
+    def alarm(self):
+        self.mqttHelper.send_message(__ALARM_MESSAGE__)
 
 if __name__ == '__main__':
     print("-------------------------------------")

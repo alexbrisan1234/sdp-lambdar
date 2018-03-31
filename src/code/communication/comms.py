@@ -9,6 +9,7 @@ __DEBUG__ = False
 
 ultra_pattern = re.compile('^<U([0-9]{1,10}|-) ([0-9]{1,10}|-)>$')
 infra_pattern = re.compile('^<I([0-9]{1,10}|-) ([0-9]{1,10}|-) ([0-9]{1,10}|-)>$')
+lock_pattern = re.compile('^<[CO]>$')
 
 class Serial_Comm:
     def __init__(self, oport=None, obaudrate=115200, otimeout=None):
@@ -34,7 +35,7 @@ class Serial_Comm:
         self.initiate_transmission()
 
         # Message is essentially a list with some checking functions
-        msgs = (None, None)
+        msgs = (None, None, None)
         inBuffer = self.ser.inWaiting()
         if __DEBUG__: print(self.ser.inWaiting())
         msg = ''
@@ -52,6 +53,11 @@ class Serial_Comm:
             valid_msgs_rec = [line for line in lines
                     if ultra_pattern.match(line) or infra_pattern.match(line)][-2:]
 
+            valid_lock_msgs_rec = [line for line in lines
+                    if lock_pattern.match(line)]
+
+            valid_msgs_rec += valid_lock_msgs_rec
+
             for msg in valid_msgs_rec:
                 try:
                     msg = Message(msg)
@@ -60,9 +66,11 @@ class Serial_Comm:
 
                 try:
                     if msg.msg_type == 'ultrasonic':
-                        msgs = (msg, msgs[1])
+                        msgs = (msg, msgs[1], msgs[2])
                     elif msg.msg_type == 'infrared':
-                        msgs = (msgs[0], msg)
+                        msgs = (msgs[0], msg, msgs[2])
+                    elif msg.msg_type == 'lock':
+                        msgs = (msgs[0], msgs[1], msg)
                 except AttributeError:
                     pass
 
@@ -93,6 +101,16 @@ class Message(list):
 
     def __init__(self, msg):
         #STM Filtering data more
+
+        if lock_pattern.match(msg):
+            self.msg_type = 'lock'
+            if msg == '<C>':
+                if __DEBUG__: print('Lock message received: ', msg)
+                self.append('close')
+            elif msg == '<O>':
+                if __DEBUG__: print('Lock message received: ', msg)
+                self.append('open')
+            return
 
         values = [int(d) if d != '-' else self.no_sig for d in msg[2:-1].split(' ')]
         self.timestamp = int(round(time.time() * 1000))
