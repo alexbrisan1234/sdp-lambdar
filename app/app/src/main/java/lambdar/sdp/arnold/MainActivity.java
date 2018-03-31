@@ -39,19 +39,14 @@ public class MainActivity extends Activity
 
     private Button m_test_button;
     private MQTTHelper mHelper;
-    boolean alarm_flag=false;
+    boolean alarm_flag = false;
+    boolean theft_flag = false;
     private NotificationChannel mChannel;
     private NotificationManager mManager;
+    private Button stopAlarm;
+    private Switch theftie;
     private Random prng = new Random(0);
-//    private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
-//            =new BottomNavigationView.OnNavigationItemSelectedListener() {
-//        @Override
-//        public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-//            return false;
-//        }
-//    };
-    Map<String, TextView> fields = new HashMap<>();
-    TextView previousView;
+
     private class MqttCallback implements Callback<MainActivity, MqttMessage>
     {
         public void accept(MainActivity activity, MqttMessage message)
@@ -60,18 +55,19 @@ public class MainActivity extends Activity
         }
     }
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         Switch activateSwitch = (Switch)  findViewById(R.id.switch1);
         Switch notificationSwitch = (Switch)  findViewById(R.id.switch2);
+        theftie = (Switch) findViewById(R.id.theftie);
+
         TextView followstatement = findViewById(R.id.manoraut);
         TextView disturbStatement = findViewById(R.id.disturbia);
-//        BottomNavigationView navigation =findViewById(R.id.navigation);
-//        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
+
         activateSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (isChecked==true){
@@ -89,19 +85,38 @@ public class MainActivity extends Activity
 
         notificationSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked==true){
+                alarm_flag = isChecked;
+                if (isChecked){
                     //   Log.i(LOG_TAG,"ON");
                     disturbStatement.setText("Out of Range Alarm");
-                    alarm_flag=true;
 
                 }
                 else {
                     //  Log.i(LOG_TAG,"OF");
                     disturbStatement.setText("No Alarm");
-                    alarm_flag=false;
                 }
             }
         });
+
+        theftie.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener()
+        {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
+            {
+                theft_flag = isChecked;
+                if (isChecked)
+                {
+                    mHelper.sendMessage("arnold/test", "LOCK");
+                }
+                else
+                {
+                    mHelper.sendMessage("arnold/test", "UNLOCK");
+                }
+
+            }
+        });
+
+
         initMembers();
     }
 
@@ -109,37 +124,13 @@ public class MainActivity extends Activity
     private void initMembers()
     {
 
-        makeNotificationChannel();
-
         this .mHelper = new MQTTHelper(this . getApplicationContext());
         this .mHelper. setCallback(new ArnoldMQTTCallback(this, new MqttCallback()));
 
-   /*     this.fields.put(
-                "KEY_UP_PRESSED",
-                (TextView) findViewById(R.id.up)
-        );
-
-        this.fields.put(
-                "KEY_DOWN_PRESSED",
-                (TextView) findViewById(R.id.down)
-        );
-
-        this.fields.put(
-                "KEY_LEFT_PRESSED",
-                (TextView) findViewById(R.id.left)
-        );
-
-        this.fields.put(
-                "KEY_RIGHT_PRESSED",
-                (TextView) findViewById(R.id.right)
-        );*/
+        this . stopAlarm = (Button) findViewById(R.id.button);
+        this . stopAlarm . setVisibility(Button.INVISIBLE);
 
 
-    }
-
-    public void onTestButtonClicked(View view)
-    {
-        this .mHelper. sendMessage("arnold/topics", "STOP");
     }
 
     public void messageReceived(MqttMessage message)
@@ -149,7 +140,8 @@ public class MainActivity extends Activity
         String message_string = message.toString();
 
         Log.i(LOG_TAG, "Checking if to send notification");
-        if (message_string.equals("OR")&& alarm_flag) //only give notification if switch is on.
+
+        if (message_string.equals("OR") && alarm_flag) //only give notification if switch is on.
         {
             Log.i(LOG_TAG, "Sending notification");
             NotificationHelper.sendNotification(
@@ -159,41 +151,24 @@ public class MainActivity extends Activity
                     MainActivity.class
             );
         }
-
-    }
-
-    public void makeNotificationChannel()
-    {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        else if (message_string.equals("AL") && theft_flag)
         {
-            String name = "Arnold";
-            String description = "Notification Channel for Arnold Companion App";
-            int importance = NotificationManager.IMPORTANCE_HIGH;
-            this . mChannel  = new NotificationChannel(name, description, importance);
-            registerChannel();
+            this . stopAlarm . setVisibility(Button.VISIBLE);
+            this . theftie . setClickable(false);
+            NotificationHelper.sendNotification(
+                    this,
+                    "Anti-Theft Alarm",
+                    "Your Arnold lid has been opened. Someone might be trying to steal your belongings",
+                    this.getClass()
+            );
         }
+
     }
 
-    public void registerChannel()
+    public void stopAlarm(View view)
     {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-        {
-            this . mManager = this . getSystemService(NotificationManager.class);
-            if (this . mManager == null)
-            {
-                return;
-            }
-            this . mManager . createNotificationChannel(this . mChannel);
-        }
-    }
-
-    public void greenPressed(View view)
-    {
-        this . mHelper . sendMessage("arnold/test", "GREEN");
-    }
-
-    public void redPressed(View view)
-    {
-        this . mHelper . sendMessage("arnold/test", "RED");
+        this . mHelper . sendMessage("arnold/test", "ASTOP");
+        this . stopAlarm . setVisibility(Button.INVISIBLE);
+        this . theftie . setClickable(true);
     }
 }
