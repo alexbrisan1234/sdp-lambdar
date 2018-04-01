@@ -2,14 +2,20 @@
 import serial
 import time
 import re
+from .leds import *
+import os
 
 __DEBUG__ = False
 
-ultra_pattern = re.compile('^<U[0-9]{1,10} [0-9]{1,10}>$')
-infra_pattern = re.compile('^<I[0-9]{1,10}( [0-9]{1,10}){4}>$')
+ultra_pattern = re.compile('^<U([0-9]{1,10}|-) ([0-9]{1,10}|-)>$')
+infra_pattern = re.compile('^<I([0-9]{1,10}|-) ([0-9]{1,10}|-) ([0-9]{1,10}|-)>$')
 
 class Serial_Comm:
-    def __init__(self, oport="/dev/ttyACM0", obaudrate=9600, otimeout=None):
+    def __init__(self, oport=None, obaudrate=9600, otimeout=None):
+        if oport == None:
+            ports = os.listdir('/dev/')
+            oport = '/dev/'+[p for p in ports if 'ACM' in p][0]
+
         self.ser = serial.Serial(port=oport, baudrate=obaudrate, timeout=otimeout)
         self.ser.read(self.ser.inWaiting())
 
@@ -17,6 +23,9 @@ class Serial_Comm:
         self.no_sig = 0xFFFFFFFF
 
         self.partial_msg = ''
+
+    def clear_buffer(self):
+        self.ser.read(self.ser.inWaiting())
 
     def read_message(self):
         '''
@@ -84,14 +93,22 @@ class Message(list):
 
     def __init__(self, msg):
         #STM Filtering data more
-        values = [int(d) for d in msg[2:-1].split(' ')]
+
+        values = [int(d) if d != '-' else self.no_sig for d in msg[2:-1].split(' ')]
         self.timestamp = int(round(time.time() * 1000))
 
         if ultra_pattern.match(msg):
             self.msg_type = 'ultrasonic'
             if __DEBUG__: print('Ultra message received: ', msg)
             if self.no_sig in values:
+                if (values[0]==self.no_sig):
+                    light_left(0)
+                if (values[1]==self.no_sig):
+                    light_right(0)
                 raise IOError('Signal not received on one/both ultrasonic sensors')
+            else:
+                light_left(1)
+                light_right(1)
         elif infra_pattern.match(msg):
             if __DEBUG__: print('Infra message received: ', msg)
             self.msg_type = 'infrared'
@@ -125,6 +142,6 @@ if __name__ == '__main__':
 
     while True:
         msgs = ard.read_message()
-        print('Ultrasonic: ', msg[0])
-        print('Infrared: ', msg[1])
+        if __DEBUG__: print('Ultrasonic: ', msg[0])
+        if __DEBUG__: print('Infrared: ', msg[1])
 
