@@ -15,7 +15,7 @@ class MqttHelper:
         return self.on
 
     def is_locked(self):
-        return self.is_locked
+        return self.locked
 
     '''
         This method connects the client to the cloud mqtt helper. 

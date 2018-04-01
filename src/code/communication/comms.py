@@ -38,45 +38,31 @@ class Serial_Comm:
         msgs = (None, None, None)
         inBuffer = self.ser.inWaiting()
         if __DEBUG__: print(self.ser.inWaiting())
-        msg = ''
         try:
             # Read the entire buffer string and convert to list of strings
             buf = self.partial_msg + self.ser.read(inBuffer).decode(errors='ignore')
             lines = buf.split('|')
             if __DEBUG__: print(lines)  # VERY useful
-            if ultra_pattern.match(lines[-1]) or infra_pattern.match(lines[-1]):
+            if ultra_pattern.match(lines[-1]) or infra_pattern.match(lines[-1]) or lock_pattern.match(lines[-1]):
                 self.partial_msg = ''
             else:
                 self.partial_msg = lines[-1]
 
-            # Filter the lines according to regex pattern then take the bottom two
-            valid_msgs_rec = [line for line in lines
-                    if ultra_pattern.match(line) or infra_pattern.match(line)][-2:]
-
-            valid_lock_msgs_rec = [line for line in lines
-                    if lock_pattern.match(line)]
-
-            valid_msgs_rec += valid_lock_msgs_rec
-
-            for msg in valid_msgs_rec:
-                try:
-                    msg = Message(msg)
-                except IOError:
-                    msg = ''
-
-                try:
-                    if msg.msg_type == 'ultrasonic':
-                        msgs = (msg, msgs[1], msgs[2])
-                    elif msg.msg_type == 'infrared':
-                        msgs = (msgs[0], msg, msgs[2])
-                    elif msg.msg_type == 'lock':
-                        msgs = (msgs[0], msgs[1], msg)
-                except AttributeError:
-                    pass
+            ultraRead = None
+            infraRead = None
+            lockRead = None
+            for line in reversed(lines):
+                if ultraRead == None and ultra_pattern.match(line): ultraRead = self.messagize(line)
+                elif infraRead == None and infra_pattern.match(line): infraRead = self.messagize(line)
+                #if we send on change, we need to iterate through all the list
+                elif lockRead == None and lock_pattern.match(line): lockRead = self.messagize(line)
+            
+            msgs = (ultraRead, infraRead, lockRead)
 
         except KeyboardInterrupt:
             print('Aborting Robot Operation')
             exit()
+        
         return msgs
 
     def send_to_serial(self, message):
@@ -92,6 +78,12 @@ class Serial_Comm:
         '''Close the port'''
         if self.ser.isOpen():
             self.ser.close()
+
+    def messagize(self, element):
+        try:
+            return Message(element)
+        except IOError:
+            return ''
 
 class Message(list):
     # Give the type of the message
@@ -120,9 +112,9 @@ class Message(list):
             if __DEBUG__: print('Ultra message received: ', msg)
             if self.no_sig in values:
                 if (values[0]==self.no_sig):
-                    light_left(0)
-                if (values[1]==self.no_sig):
                     light_right(0)
+                if (values[1]==self.no_sig):
+                    light_left(0)
                 raise IOError('Signal not received on one/both ultrasonic sensors')
             else:
                 light_left(1)
