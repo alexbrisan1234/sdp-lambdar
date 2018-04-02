@@ -12,7 +12,7 @@ from src.code.control.pid import PID
 print("Importing time...")
 import time
 import ev3dev.ev3 as ev3
-
+import subprocess
 
 
 __DEBUG__ = False
@@ -33,7 +33,7 @@ class Arnold:
         MOVE = 1      # Default operation mode. Robot will blindly follow the carrot
         WAIT = 2        # Halt actuation and wait for a usable
 
-    def __init__(self, ms=600):
+    def __init__(self, ms=800):
         self.motors = ArnoldMotors({'frontLeft':'A','frontRight':'B','rearLeft':'C','rearRight':'D'}, ms)
         self.acting_mode = self.Mode.WAIT
         #self.time = 0
@@ -44,7 +44,7 @@ class Arnold:
         self.speed = ms
         self.max_speed = ms
         self.turning_rate = 0.00
-
+        ev3.Sound.set_volume(100)
         self.mqttHelper = MqttHelper()
         self.is_on = False
 
@@ -94,13 +94,12 @@ class Arnold:
                 if new_data[2]:
                     self.lock_data = new_data[2]
                     if self.lock_data[0] == 'open' and self.mqttHelper.is_locked():
-                        print('ALARM')
                         self.alarm()
 
                 if __DEBUG__ :
                     if self.ultra_data: print('Ultrasonic: ', self.ultra_data)
                     if self.infra_data: print('Infrared: ', self.infra_data)
-                    if self.infra_data: print('Lock: ', self.lock_data)
+                    if self.lock_data: print('Lock: ', self.lock_data)
 
                 # If the data from the ultrasonics is old then switch modes
                 if self.ultra_data and int(round(time.time() * 1000)) - self.ultra_data.timestamp > __FOLLOW_TIMEOUT_DELAY__:
@@ -111,7 +110,10 @@ class Arnold:
                     #we have ultra data and they're up to date
                     if __DEBUG__: print("We can now send notifications again")
                     self.__sentNotification = False
-
+                else:
+                    #takes care of initial case (no ultra data)
+                    self.acting_mode = self.Mode.WAIT
+                
                 # Update motion based on current (move or wait)
                 self.actuate()
                 if __DEBUG__: print('No data received')
@@ -127,17 +129,21 @@ class Arnold:
         #too close to the user, robot stops
         if dist < 26000:
             if abs(trackCoeff) < 0.3: spd = 0
-            else: spd = 400
+            else: spd = 600
         elif dist > 28000:
             spd = self.max_speed
         else:
             spd = self.max_speed * (dist - 26000) / 2000
         self.speed = spd
 
+    #returns [-1,1]
     def calculateTrackingCoef(self):
         #Divisor SHOULD BE proportional to speed --- NEED TO IMPLEMENT THIS
-        trackCoeff = (self.ultra_data.get_right() - self.ultra_data.get_left()) / 900.0
-        return min(1, max(-1, trackCoeff))
+        # self.ultra_data.get_right() - self.ultra_data.get_left() # [-~650, ~650]
+        #trackCoeff = (self.ultra_data.get_right() - self.ultra_data.get_left()) / 750.0
+        diff = self.ultra_data.get_right() - self.ultra_data.get_left()
+        coef = max(-620, min(620, diff))/620
+        return coef
 
     def actuate(self):
         'Logic for selecting an actuation strategy and activating motors'
@@ -191,10 +197,11 @@ class Arnold:
             self.__sentNotification = True
 
     def alarm(self):
-        ev3.Sound.set_volume(100)
+        ev3.Sound.beep('-f 200 -l 3000')
         self.mqttHelper.send_message(__ALARM_MESSAGE__)
-        ev3.Sound.speak('Go away!').wait()
-        #ev3.Sound.play('alarm.wav').wait()
+        if __DEBUG__: print('ALARM')
+        #ev3.Sound.speak('Go away!')
+        #ev3.Sound.play('alarm.wav')
 
 if __name__ == '__main__':
     print("-------------------------------------")

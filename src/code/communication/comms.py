@@ -2,7 +2,7 @@
 import serial
 import time
 import re
-from .leds import *
+from .leds import light_left, light_right
 import os
 
 __DEBUG__ = False
