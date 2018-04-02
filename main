@@ -12,7 +12,6 @@ from src.code.control.pid import PID
 print("Importing time...")
 import time
 import ev3dev.ev3 as ev3
-import subprocess
 
 
 __DEBUG__ = False
