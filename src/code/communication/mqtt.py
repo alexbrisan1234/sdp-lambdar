@@ -9,13 +9,13 @@ class MqttHelper:
         self.client.username_pw_set(username='gdsszota', password='F6am0LwBcGBG')
         self.messageQueue = []
         self.on = False
-        self.locked = True
+        self.locked = False
 
     def is_on(self):
         return self.on
 
     def is_locked(self):
-        return self.is_locked
+        return self.locked
 
     '''
         This method connects the client to the cloud mqtt helper. 
