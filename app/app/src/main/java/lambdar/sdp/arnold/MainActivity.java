@@ -132,6 +132,7 @@ public class MainActivity extends Activity
         }
     }
 
+
     private class MqttCallback implements Callback<MainActivity, MqttMessage>
     {
         public void accept(MainActivity activity, MqttMessage message)
@@ -145,7 +146,6 @@ public class MainActivity extends Activity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
         initMembers();
     }
 
@@ -155,6 +155,7 @@ public class MainActivity extends Activity
 
         this .mHelper = new MQTTHelper(this . getApplicationContext());
         this .mHelper. setCallback(new ArnoldMQTTCallback(this, new MqttCallback()));
+
 
         List<SwitchButton> options = new ArrayList<>();
 
@@ -237,7 +238,6 @@ public class MainActivity extends Activity
         Log.i(LOG_TAG, message.toString());
 
         String message_string = message.toString();
-
         if (message_string.equals("OR") && alarm_flag) //only give notification if switch is on.
         {
             Log.i(LOG_TAG, "Sending notification");
@@ -250,7 +250,6 @@ public class MainActivity extends Activity
         }
         else if (message_string.equals("AL") && theft_flag)
         {
-            Log.i(LOG_TAG, "Sending notification");
             NotificationHelper.sendNotification(
                     this,
                     "Anti-Theft Alarm",
