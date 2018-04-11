@@ -2,13 +2,14 @@
 import serial
 import time
 import re
-from .leds import *
+from .leds import light_left, light_right
 import os
 
 __DEBUG__ = False
 
 ultra_pattern = re.compile('^<U([0-9]{1,10}|-) ([0-9]{1,10}|-)>$')
 infra_pattern = re.compile('^<I([0-9]{1,10}|-) ([0-9]{1,10}|-) ([0-9]{1,10}|-)>$')
+lock_pattern = re.compile('^<[CO]>$')
 
 class Serial_Comm:
     def __init__(self, oport=None, obaudrate=115200, otimeout=None):
@@ -34,41 +35,34 @@ class Serial_Comm:
         self.initiate_transmission()
 
         # Message is essentially a list with some checking functions
-        msgs = (None, None)
+        msgs = (None, None, None)
         inBuffer = self.ser.inWaiting()
         if __DEBUG__: print(self.ser.inWaiting())
-        msg = ''
         try:
             # Read the entire buffer string and convert to list of strings
             buf = self.partial_msg + self.ser.read(inBuffer).decode(errors='ignore')
             lines = buf.split('|')
             if __DEBUG__: print(lines)  # VERY useful
-            if ultra_pattern.match(lines[-1]) or infra_pattern.match(lines[-1]):
+            if ultra_pattern.match(lines[-1]) or infra_pattern.match(lines[-1]) or lock_pattern.match(lines[-1]):
                 self.partial_msg = ''
             else:
                 self.partial_msg = lines[-1]
 
-            # Filter the lines according to regex pattern then take the bottom two
-            valid_msgs_rec = [line for line in lines
-                    if ultra_pattern.match(line) or infra_pattern.match(line)][-2:]
-
-            for msg in valid_msgs_rec:
-                try:
-                    msg = Message(msg)
-                except IOError:
-                    msg = ''
-
-                try:
-                    if msg.msg_type == 'ultrasonic':
-                        msgs = (msg, msgs[1])
-                    elif msg.msg_type == 'infrared':
-                        msgs = (msgs[0], msg)
-                except AttributeError:
-                    pass
+            ultraRead = None
+            infraRead = None
+            lockRead = None
+            for line in reversed(lines):
+                if ultraRead == None and ultra_pattern.match(line): ultraRead = self.messagize(line)
+                elif infraRead == None and infra_pattern.match(line): infraRead = self.messagize(line)
+                #if we send on change, we need to iterate through all the list
+                elif lockRead == None and lock_pattern.match(line): lockRead = self.messagize(line)
+            
+            msgs = (ultraRead, infraRead, lockRead)
 
         except KeyboardInterrupt:
             print('Aborting Robot Operation')
             exit()
+        
         return msgs
 
     def send_to_serial(self, message):
@@ -85,6 +79,12 @@ class Serial_Comm:
         if self.ser.isOpen():
             self.ser.close()
 
+    def messagize(self, element):
+        try:
+            return Message(element)
+        except IOError:
+            return ''
+
 class Message(list):
     # Give the type of the message
     msg_type = None
@@ -94,6 +94,16 @@ class Message(list):
     def __init__(self, msg):
         #STM Filtering data more
 
+        if lock_pattern.match(msg):
+            self.msg_type = 'lock'
+            if msg == '<C>':
+                if __DEBUG__: print('Lock message received: ', msg)
+                self.append('close')
+            elif msg == '<O>':
+                if __DEBUG__: print('Lock message received: ', msg)
+                self.append('open')
+            return
+
         values = [int(d) if d != '-' else self.no_sig for d in msg[2:-1].split(' ')]
         self.timestamp = int(round(time.time() * 1000))
 
@@ -102,9 +112,9 @@ class Message(list):
             if __DEBUG__: print('Ultra message received: ', msg)
             if self.no_sig in values:
                 if (values[0]==self.no_sig):
-                    light_left(0)
-                if (values[1]==self.no_sig):
                     light_right(0)
+                if (values[1]==self.no_sig):
+                    light_left(0)
                 raise IOError('Signal not received on one/both ultrasonic sensors')
             else:
                 light_left(1)
