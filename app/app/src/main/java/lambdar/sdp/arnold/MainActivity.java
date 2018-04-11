@@ -12,9 +12,13 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 //import android.support.design.widget.BottomNavigationView;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.Switch;
@@ -23,7 +27,9 @@ import android.widget.TextView;
 
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -44,8 +50,88 @@ public class MainActivity extends Activity
     private NotificationChannel mChannel;
     private NotificationManager mManager;
     private Button stopAlarm;
-    private Switch theftie;
+    private TextView poweredBy;
     private Random prng = new Random(0);
+    private boolean notifications_flag = false;
+
+    private RecyclerView wordlistView;
+    private RecyclerView.Adapter wAdapter;
+    private RecyclerView.LayoutManager wLayoutManager;
+
+    static class SwitchButton
+    {
+        CompoundButton.OnCheckedChangeListener mListener;
+        String label;
+
+        SwitchButton(String label, CompoundButton.OnCheckedChangeListener listener)
+        {
+            this.label = label;
+            this.mListener = listener;
+        }
+    }
+
+
+    private static class WordlistAdapter extends RecyclerView.Adapter<WordlistAdapter.ViewHolder>
+    {
+
+        private List<SwitchButton> dataset;
+
+        class ViewHolder extends RecyclerView.ViewHolder
+        {
+            String string;
+            TextView categoryName;
+            Switch mSwitch;
+
+            ViewHolder(View v)
+            {
+                super(v);
+                this . categoryName = v . findViewById(R . id . categoryName);
+                this . mSwitch = v . findViewById(R . id . categorySwitch);
+            }
+
+            void setText(String text)
+            {
+                this . categoryName . setText(text);
+            }
+
+            void setListener(CompoundButton.OnCheckedChangeListener listener)
+            {
+                this . mSwitch . setOnCheckedChangeListener(listener);
+            }
+        }
+
+        public WordlistAdapter(List<SwitchButton> gw)
+        {
+            this . dataset = gw;
+        }
+
+        @Override
+        public WordlistAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType)
+        {
+            View v = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.optioncard, parent, false);
+            return new ViewHolder(v);
+        }
+
+        @Override
+        public void onBindViewHolder(final WordlistAdapter.ViewHolder holder, int position)
+        {
+            SwitchButton card_at_position = this . dataset . get(position);
+
+            holder . setText(card_at_position . label);
+
+            holder . setListener(card_at_position . mListener);
+
+
+        }
+
+        @Override
+        public int getItemCount()
+        {
+            return this . dataset . size();
+        }
+    }
+
 
     private class MqttCallback implements Callback<MainActivity, MqttMessage>
     {
@@ -60,63 +146,6 @@ public class MainActivity extends Activity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        Switch activateSwitch = (Switch)  findViewById(R.id.switch1);
-        Switch notificationSwitch = (Switch)  findViewById(R.id.switch2);
-        theftie = (Switch) findViewById(R.id.theftie);
-
-        TextView followstatement = findViewById(R.id.manoraut);
-        TextView disturbStatement = findViewById(R.id.disturbia);
-
-        activateSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked==true){
-                 //   Log.i(LOG_TAG,"ON");
-                    followstatement.setText("Follow");
-                    mHelper.sendMessage("arnold/topics", "START");
-                }
-                else {
-                  //  Log.i(LOG_TAG,"OF");
-                    followstatement.setText("Do Not Follow");
-                    mHelper.sendMessage("arnold/topics","STOP");
-                }
-            }
-        });
-
-        notificationSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                alarm_flag = isChecked;
-                if (isChecked){
-                    //   Log.i(LOG_TAG,"ON");
-                    disturbStatement.setText("Out of Range Alarm");
-
-                }
-                else {
-                    //  Log.i(LOG_TAG,"OF");
-                    disturbStatement.setText("No Alarm");
-                }
-            }
-        });
-
-        theftie.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener()
-        {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
-            {
-                theft_flag = isChecked;
-                if (isChecked)
-                {
-                    mHelper.sendMessage("arnold/test", "LOCK");
-                }
-                else
-                {
-                    mHelper.sendMessage("arnold/test", "UNLOCK");
-                }
-
-            }
-        });
-
-
         initMembers();
     }
 
@@ -127,20 +156,88 @@ public class MainActivity extends Activity
         this .mHelper = new MQTTHelper(this . getApplicationContext());
         this .mHelper. setCallback(new ArnoldMQTTCallback(this, new MqttCallback()));
 
-        this . stopAlarm = (Button) findViewById(R.id.button);
-        this . stopAlarm . setVisibility(Button.INVISIBLE);
 
+        List<SwitchButton> options = new ArrayList<>();
+
+        options.add(new SwitchButton(
+                "Follow",
+                new CompoundButton.OnCheckedChangeListener() {
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        if (isChecked){
+                            //   Log.i(LOG_TAG,"ON");
+                            mHelper.sendMessage("arnold/topics", "START");
+                        }
+                        else {
+                            //  Log.i(LOG_TAG,"OF");
+                            mHelper.sendMessage("arnold/topics","STOP");
+                        }
+                    }
+                }
+        ));
+
+        options.add(new SwitchButton(
+                "Out of Range",
+                new CompoundButton.OnCheckedChangeListener() {
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        alarm_flag = isChecked;
+                    }
+                }
+        ));
+
+        options.add(new SwitchButton(
+                "Lock",
+                new CompoundButton.OnCheckedChangeListener()
+                {
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
+                    {
+                        theft_flag = isChecked;
+                        if (isChecked)
+                        {
+                            mHelper.sendMessage("arnold/test", "LOCK");
+                        }
+                        else
+                        {
+                            mHelper.sendMessage("arnold/test", "UNLOCK");
+                        }
+
+                    }
+                }
+        ));
+
+        options.add(new SwitchButton(
+                "Notifications",
+                new CompoundButton.OnCheckedChangeListener()
+                {
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
+                    {
+                        notifications_flag = isChecked;
+                    }
+                }
+        ));
+
+
+        wordlistView = (RecyclerView) findViewById(R.id.wordlist_recycler_view);
+        wordlistView . setHasFixedSize(true);
+
+        wLayoutManager = new LinearLayoutManager(this);
+        wordlistView.setLayoutManager(wLayoutManager);
+
+        wAdapter = new WordlistAdapter(options);
+        wordlistView . setAdapter(wAdapter);
 
     }
 
     public void messageReceived(MqttMessage message)
     {
+        if (!this.notifications_flag)
+        {
+            return;
+        }
         Log.i(LOG_TAG, message.toString());
 
         String message_string = message.toString();
-
-        Log.i(LOG_TAG, "Checking if to send notification");
-
         if (message_string.equals("OR") && alarm_flag) //only give notification if switch is on.
         {
             Log.i(LOG_TAG, "Sending notification");
@@ -153,8 +250,6 @@ public class MainActivity extends Activity
         }
         else if (message_string.equals("AL") && theft_flag)
         {
-            this . stopAlarm . setVisibility(Button.VISIBLE);
-            this . theftie . setClickable(false);
             NotificationHelper.sendNotification(
                     this,
                     "Anti-Theft Alarm",
@@ -163,12 +258,5 @@ public class MainActivity extends Activity
             );
         }
 
-    }
-
-    public void stopAlarm(View view)
-    {
-        this . mHelper . sendMessage("arnold/test", "ASTOP");
-        this . stopAlarm . setVisibility(Button.INVISIBLE);
-        this . theftie . setClickable(true);
     }
 }
