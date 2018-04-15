@@ -43,10 +43,6 @@ plt.legend(('Average human walking speed', 'Speed of the robot'), frameon=True, 
 plt.show()
 ```
 
-    /home/brano/miniconda2/envs/sdp/lib/python3.4/site-packages/matplotlib/font_manager.py:1297: UserWarning: findfont: Font family ['sans-serif'] not found. Falling back to DejaVu Sans
-      (prop.get_family(), self.defaultFamily[fontext]))
-
-
 
 ![png](output_4_1.png)
 
